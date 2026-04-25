@@ -56,6 +56,25 @@ struct JustAboutTimeTests {
         )
     }
 
+    @Test func overdueRestartEmitsCompletionAndStartsFreshCountdown() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        var machine = TimerStateMachine()
+
+        _ = machine.send(.startCountdown(duration: 120, now: start))
+        let events = machine.send(.restart(now: start.addingTimeInterval(130)))
+
+        #expect(events == [.countdownCompleted])
+        #expect(
+            machine.state == .active(
+                TimerSession(
+                    startedAt: start.addingTimeInterval(130),
+                    mode: .countdown(duration: 120),
+                    phase: .runningCountdown(targetDate: start.addingTimeInterval(250))
+                )
+            )
+        )
+    }
+
     @Test func countUpAdvancesFromZero() {
         let start = Date(timeIntervalSinceReferenceDate: 1_000)
         var machine = TimerStateMachine()
@@ -71,9 +90,20 @@ struct JustAboutTimeTests {
         var machine = TimerStateMachine()
 
         _ = machine.send(.startCountUp(now: start))
-        let events = machine.send(.finish)
+        let events = machine.send(.finish(now: start))
 
         #expect(events.isEmpty)
+        #expect(machine.state == .idle)
+    }
+
+    @Test func overdueFinishEmitsCompletionAndReturnsToIdle() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        var machine = TimerStateMachine()
+
+        _ = machine.send(.startCountdown(duration: 5, now: start))
+        let events = machine.send(.finish(now: start.addingTimeInterval(6)))
+
+        #expect(events == [.countdownCompleted])
         #expect(machine.state == .idle)
     }
 

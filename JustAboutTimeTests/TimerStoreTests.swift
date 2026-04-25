@@ -404,6 +404,51 @@ struct TimerStoreTests {
     }
 
     @MainActor
+    @Test func overdueRestartPersistsCompletedCountdownAndStartsFreshSession() throws {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let directoryURL = try makeTemporaryDirectory()
+        let historyStore = HistoryStore(fileURL: directoryURL.appendingPathComponent("history.json"))
+        let store = TimerStore(historyStore: historyStore, now: { clock.now })
+
+        store.startCountdown(duration: 90)
+        clock.advance(by: 95)
+        store.restart()
+
+        let entry = try #require(historyStore.loadEntries().first)
+        let session = try #require(store.activeSession)
+
+        #expect(store.latestEvent == .countdownCompleted)
+        #expect(entry.presetDuration == 90)
+        #expect(entry.startedAt == Date(timeIntervalSinceReferenceDate: 1_000))
+        #expect(entry.completedAt == Date(timeIntervalSinceReferenceDate: 1_095))
+        #expect(session.startedAt == Date(timeIntervalSinceReferenceDate: 1_095))
+        #expect(session.mode == .countdown(duration: 90))
+        #expect(session.phase.isRunning == true)
+        #expect(store.statusPresentation.text == "01:30")
+    }
+
+    @MainActor
+    @Test func overdueFinishPersistsCompletedCountdownAndReturnsIdle() throws {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let directoryURL = try makeTemporaryDirectory()
+        let historyStore = HistoryStore(fileURL: directoryURL.appendingPathComponent("history.json"))
+        let store = TimerStore(historyStore: historyStore, now: { clock.now })
+
+        store.startCountdown(duration: 90)
+        clock.advance(by: 95)
+        store.finish()
+
+        let entry = try #require(historyStore.loadEntries().first)
+
+        #expect(store.latestEvent == .countdownCompleted)
+        #expect(store.activeSession == nil)
+        #expect(entry.presetDuration == 90)
+        #expect(entry.startedAt == Date(timeIntervalSinceReferenceDate: 1_000))
+        #expect(entry.completedAt == Date(timeIntervalSinceReferenceDate: 1_095))
+        #expect(store.statusPresentation.text == "00:00")
+    }
+
+    @MainActor
     @Test func finishAndRestartDoNotPersistCountdownHistory() throws {
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
         let directoryURL = try makeTemporaryDirectory()
@@ -418,6 +463,56 @@ struct TimerStoreTests {
         clock.advance(by: 10)
         store.finish()
         #expect(historyStore.loadEntries().isEmpty)
+    }
+
+    @MainActor
+    @Test func overdueRestartSchedulesNotificationWhenAuthorized() async throws {
+        let center = TestNotificationCenter(initialStatus: .authorized)
+        let notificationManager = NotificationManager(client: center.makeClient())
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let store = TimerStore(notificationManager: notificationManager, now: { clock.now })
+
+        await notificationManager.refresh()
+
+        store.startCountdown(duration: 90)
+        clock.advance(by: 95)
+        store.restart()
+
+        while await center.requests.isEmpty {
+            await Task.yield()
+        }
+
+        let request = try #require(await center.requests.first)
+
+        #expect(store.latestEvent == .countdownCompleted)
+        #expect(request.title == "Countdown Complete")
+        #expect(request.body == "Your 1m countdown finished.")
+        #expect(store.activeSession?.mode == .countdown(duration: 90))
+    }
+
+    @MainActor
+    @Test func overdueFinishSchedulesNotificationWhenAuthorized() async throws {
+        let center = TestNotificationCenter(initialStatus: .authorized)
+        let notificationManager = NotificationManager(client: center.makeClient())
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let store = TimerStore(notificationManager: notificationManager, now: { clock.now })
+
+        await notificationManager.refresh()
+
+        store.startCountdown(duration: 90)
+        clock.advance(by: 95)
+        store.finish()
+
+        while await center.requests.isEmpty {
+            await Task.yield()
+        }
+
+        let request = try #require(await center.requests.first)
+
+        #expect(store.latestEvent == .countdownCompleted)
+        #expect(request.title == "Countdown Complete")
+        #expect(request.body == "Your 1m countdown finished.")
+        #expect(store.activeSession == nil)
     }
 
     @MainActor

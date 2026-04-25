@@ -97,7 +97,8 @@ final class TimerStore: ObservableObject {
     }
 
     func finish() {
-        send(.finish, referenceTime: now())
+        let currentTime = now()
+        send(.finish(now: currentTime), referenceTime: currentTime)
     }
 
     private func startMostRecentMode(referenceTime: Date) {

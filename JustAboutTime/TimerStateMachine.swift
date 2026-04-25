@@ -12,7 +12,7 @@ struct TimerStateMachine: Equatable {
         case pause(now: Date)
         case resume(now: Date)
         case restart(now: Date)
-        case finish
+        case finish(now: Date)
         case tick(now: Date)
     }
 
@@ -117,6 +117,8 @@ struct TimerStateMachine: Equatable {
                 return []
             }
 
+            let events = overdueCompletionEvents(for: session, now: now)
+
             switch session.mode {
             case let .countdown(duration):
                 state = .active(
@@ -130,11 +132,18 @@ struct TimerStateMachine: Equatable {
                 state = .active(TimerSession(startedAt: now, mode: .countUp, phase: .runningCountUp(startedAt: now, accumulated: 0)))
             }
 
-            return []
+            return events
 
-        case .finish:
+        case let .finish(now):
+            let events: [Event]
+            if case let .active(session) = state {
+                events = overdueCompletionEvents(for: session, now: now)
+            } else {
+                events = []
+            }
+
             state = .idle
-            return []
+            return events
 
         case let .tick(now):
             guard case let .active(session) = state else {
@@ -148,6 +157,15 @@ struct TimerStateMachine: Equatable {
             case .runningCountdown, .pausedCountdown, .runningCountUp, .pausedCountUp:
                 return []
             }
+        }
+    }
+
+    private func overdueCompletionEvents(for session: TimerSession, now: Date) -> [Event] {
+        switch session.phase {
+        case let .runningCountdown(targetDate) where targetDate <= now:
+            return [.countdownCompleted]
+        case .runningCountdown, .pausedCountdown, .runningCountUp, .pausedCountUp:
+            return []
         }
     }
 }
