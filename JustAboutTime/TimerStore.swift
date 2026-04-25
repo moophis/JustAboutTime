@@ -23,6 +23,7 @@ final class TimerStore: ObservableObject {
     private let presenter: StatusBarPresenter
     private let historyStore: HistoryStore
     private let notificationManager: NotificationManager
+    private let preferencesStore: PreferencesStore
     private let now: @Sendable () -> Date
     private let sleep: Sleep
     private let tickInterval: Duration
@@ -36,6 +37,7 @@ final class TimerStore: ObservableObject {
         presenter: StatusBarPresenter = StatusBarPresenter(),
         historyStore: HistoryStore = HistoryStore(),
         notificationManager: NotificationManager = NotificationManager(),
+        preferencesStore: PreferencesStore = PreferencesStore(),
         now: @escaping @Sendable () -> Date = Date.init,
         sleep: @escaping Sleep = { try await Task.sleep(for: $0) },
         tickInterval: Duration = .seconds(1)
@@ -43,6 +45,7 @@ final class TimerStore: ObservableObject {
         self.presenter = presenter
         self.historyStore = historyStore
         self.notificationManager = notificationManager
+        self.preferencesStore = preferencesStore
         self.now = now
         self.sleep = sleep
         self.tickInterval = tickInterval
@@ -51,17 +54,33 @@ final class TimerStore: ObservableObject {
         latestEvent = nil
         latestHistoryError = nil
         statusPresentation = presenter.presentation(for: .idle, animationStep: 0)
+        loadLastTimerType()
+    }
+
+    private func loadLastTimerType() {
+        guard let lastTimerType = preferencesStore.lastTimerType else {
+            return
+        }
+
+        switch lastTimerType {
+        case let .countdown(duration):
+            repeatableStartMode = .countdown(duration: duration)
+        case .countUp:
+            repeatableStartMode = .countUp
+        }
     }
 
     func startCountdown(duration: TimeInterval) {
         let currentTime = now()
         repeatableStartMode = .countdown(duration: duration)
+        preferencesStore.setLastTimerType(.countdown(duration: duration))
         send(.startCountdown(duration: duration, now: currentTime), referenceTime: currentTime)
     }
 
     func startCountUp() {
         let currentTime = now()
         repeatableStartMode = .countUp
+        preferencesStore.setLastTimerType(.countUp)
         send(.startCountUp(now: currentTime), referenceTime: currentTime)
     }
 

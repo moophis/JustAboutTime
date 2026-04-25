@@ -4,16 +4,18 @@ import SwiftUI
 struct JustAboutTimeApp: App {
     @StateObject private var historyStore: HistoryStore
     @StateObject private var notificationManager: NotificationManager
+    @StateObject private var preferencesStore = PreferencesStore()
     @StateObject private var timerStore: TimerStore
     @StateObject private var shortcutManager: ShortcutManager
-    @StateObject private var preferencesStore = PreferencesStore()
 
     init() {
         let historyStore = HistoryStore()
         let notificationManager = NotificationManager()
-        let timerStore = TimerStore(historyStore: historyStore, notificationManager: notificationManager)
+        let preferencesStore = PreferencesStore()
+        let timerStore = TimerStore(historyStore: historyStore, notificationManager: notificationManager, preferencesStore: preferencesStore)
         _historyStore = StateObject(wrappedValue: historyStore)
         _notificationManager = StateObject(wrappedValue: notificationManager)
+        _preferencesStore = StateObject(wrappedValue: preferencesStore)
         _timerStore = StateObject(wrappedValue: timerStore)
         _shortcutManager = StateObject(wrappedValue: ShortcutManager(timerStore: timerStore))
     }
