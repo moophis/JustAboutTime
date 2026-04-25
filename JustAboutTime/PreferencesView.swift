@@ -1,11 +1,10 @@
 import AppKit
 import KeyboardShortcuts
 import SwiftUI
-import UserNotifications
 
 struct PreferencesView: View {
     @ObservedObject var preferencesStore: PreferencesStore
-    @StateObject private var notificationPermissions = NotificationPermissionModel()
+    @ObservedObject var notificationManager: NotificationManager
 
     var body: some View {
         Form {
@@ -32,16 +31,16 @@ struct PreferencesView: View {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Alerts")
-                        Text(notificationPermissions.detailText)
+                        Text(detailText)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
 
                     Spacer()
 
-                    if let action = notificationPermissions.action {
-                        Button(action.title) {
-                            action.handler()
+                    if let actionTitle {
+                        Button(actionTitle) {
+                            performNotificationAction()
                         }
                     }
                 }
@@ -51,7 +50,44 @@ struct PreferencesView: View {
         .padding(20)
         .frame(minWidth: 420, minHeight: 320)
         .task {
-            await notificationPermissions.refresh()
+            await notificationManager.refresh()
+        }
+    }
+
+    private var detailText: String {
+        switch notificationManager.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            return "Notification access is enabled for countdown alerts."
+        case .denied:
+            return "Notification access is turned off. Open System Settings to enable alerts later."
+        case .notDetermined:
+            return "Countdown alerts are not allowed yet. Grant access so completed timers can notify you."
+        case .unknown:
+            return "Notification access status is unavailable."
+        }
+    }
+
+    private var actionTitle: String? {
+        switch notificationManager.authorizationStatus {
+        case .notDetermined:
+            return "Allow Notifications"
+        case .denied:
+            return "Open System Settings"
+        case .authorized, .provisional, .ephemeral, .unknown:
+            return "Refresh"
+        }
+    }
+
+    private func performNotificationAction() {
+        switch notificationManager.authorizationStatus {
+        case .notDetermined:
+            Task { await notificationManager.requestAuthorization() }
+        case .denied:
+            if let settingsURL = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
+                NSWorkspace.shared.open(settingsURL)
+            }
+        case .authorized, .provisional, .ephemeral, .unknown:
+            Task { await notificationManager.refresh() }
         }
     }
 
@@ -100,61 +136,5 @@ private struct PresetDurationRow: View {
         }
 
         return "\(minutes)m"
-    }
-}
-
-@MainActor
-private final class NotificationPermissionModel: ObservableObject {
-    struct Action {
-        let title: String
-        let handler: () -> Void
-    }
-
-    @Published private(set) var status: UNAuthorizationStatus = .notDetermined
-
-    var detailText: String {
-        switch status {
-        case .authorized, .provisional, .ephemeral:
-            return "Notification access is enabled for countdown alerts."
-        case .denied:
-            return "Notification access is turned off. Open System Settings to enable alerts later."
-        case .notDetermined:
-            return "Countdown alerts are not allowed yet. Grant access so completed timers can notify you."
-        @unknown default:
-            return "Notification access status is unavailable."
-        }
-    }
-
-    var action: Action? {
-        switch status {
-        case .notDetermined:
-            return Action(title: "Allow Notifications") { [weak self] in
-                Task { await self?.requestAuthorization() }
-            }
-        case .denied:
-            return Action(title: "Open System Settings") {
-                if let settingsURL = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
-                    NSWorkspace.shared.open(settingsURL)
-                }
-            }
-        case .authorized, .provisional, .ephemeral:
-            return Action(title: "Refresh") { [weak self] in
-                Task { await self?.refresh() }
-            }
-        @unknown default:
-            return Action(title: "Refresh") { [weak self] in
-                Task { await self?.refresh() }
-            }
-        }
-    }
-
-    func refresh() async {
-        let settings = await UNUserNotificationCenter.current().notificationSettings()
-        status = settings.authorizationStatus
-    }
-
-    private func requestAuthorization() async {
-        _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
-        await refresh()
     }
 }

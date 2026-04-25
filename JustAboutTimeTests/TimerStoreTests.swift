@@ -99,6 +99,56 @@ struct TimerStoreTests {
     }
 
     @MainActor
+    @Test func countdownCompletionSchedulesNotificationWhenAuthorized() async throws {
+        let center = TestNotificationCenter(initialStatus: .authorized)
+        let notificationManager = NotificationManager(client: center.makeClient())
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let sleeper = TestSleeper()
+        let store = TimerStore(
+            notificationManager: notificationManager,
+            now: { clock.now },
+            sleep: sleeper.sleep(for:)
+        )
+
+        await notificationManager.refresh()
+        store.startCountdown(duration: 90)
+        clock.advance(by: 90)
+        await sleeper.resumeOnce()
+
+        while store.latestEvent == nil {
+            await Task.yield()
+        }
+
+        while await center.requests.isEmpty {
+            await Task.yield()
+        }
+
+        let request = try #require(await center.requests.first)
+
+        #expect(store.latestEvent == .countdownCompleted)
+        #expect(request.title == "Countdown Complete")
+        #expect(request.body == "Your 1m countdown finished.")
+    }
+
+    @MainActor
+    @Test func deniedNotificationsDoNotBreakCountdownCompletionFlow() async throws {
+        let center = TestNotificationCenter(initialStatus: .denied)
+        let notificationManager = NotificationManager(client: center.makeClient())
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let store = TimerStore(notificationManager: notificationManager, now: { clock.now })
+
+        await notificationManager.refresh()
+
+        store.startCountdown(duration: 1)
+        clock.advance(by: 2)
+        store.pause()
+
+        #expect(store.latestEvent == .countdownCompleted)
+        #expect(store.activeSession == nil)
+        #expect(await center.requests.isEmpty)
+    }
+
+    @MainActor
     @Test func timerStorePublishesTickUpdatesFromMainThread() async throws {
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
         let sleeper = TestSleeper()
@@ -247,6 +297,39 @@ private final class TestClock: @unchecked Sendable {
 
     func advance(by interval: TimeInterval) {
         now = now.addingTimeInterval(interval)
+    }
+}
+
+private actor TestNotificationCenter {
+    private(set) var status: NotificationManager.AuthorizationStatus
+    private(set) var requests: [NotificationManager.Request] = []
+    private(set) var authorizationRequestCount = 0
+
+    init(initialStatus: NotificationManager.AuthorizationStatus) {
+        status = initialStatus
+    }
+
+    nonisolated func makeClient() -> NotificationManager.Client {
+        NotificationManager.Client(
+            authorizationStatus: { [weak self] in
+                await self?.status ?? .unknown
+            },
+            requestAuthorization: { [weak self] _ in
+                await self?.recordAuthorizationRequest()
+                return true
+            },
+            add: { [weak self] request in
+                await self?.appendRequest(request)
+            }
+        )
+    }
+
+    func recordAuthorizationRequest() {
+        authorizationRequestCount += 1
+    }
+
+    func appendRequest(_ request: NotificationManager.Request) {
+        requests.append(request)
     }
 }
 

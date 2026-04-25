@@ -156,13 +156,15 @@ struct JustAboutTimeTests {
         #expect(appSource.contains("MenuBarView(timerStore: timerStore, preferencesStore: preferencesStore)"))
         #expect(appSource.contains("StatusBarLabelView(presentation: timerStore.statusPresentation)"))
         #expect(appSource.contains("@StateObject private var historyStore: HistoryStore"))
+        #expect(appSource.contains("@StateObject private var notificationManager = NotificationManager()"))
         #expect(appSource.contains("@StateObject private var preferencesStore = PreferencesStore()"))
         #expect(appSource.contains("let historyStore = HistoryStore()"))
-        #expect(appSource.contains("TimerStore(historyStore: historyStore)"))
+        #expect(appSource.contains("let notificationManager = NotificationManager()"))
+        #expect(appSource.contains("TimerStore(historyStore: historyStore, notificationManager: notificationManager)"))
         #expect(appSource.contains("Window(\"History\", id: HistoryWindow.id)"))
         #expect(appSource.contains("HistoryView(historyStore: historyStore, timerStore: timerStore)"))
         #expect(appSource.contains("Settings {"))
-        #expect(appSource.contains("PreferencesView(preferencesStore: preferencesStore)"))
+        #expect(appSource.contains("PreferencesView(preferencesStore: preferencesStore, notificationManager: notificationManager)"))
     }
 
     @Test func menuBarViewAcceptsTimerStore() throws {

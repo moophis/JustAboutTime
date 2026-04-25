@@ -3,13 +3,16 @@ import SwiftUI
 @main
 struct JustAboutTimeApp: App {
     @StateObject private var historyStore: HistoryStore
+    @StateObject private var notificationManager = NotificationManager()
     @StateObject private var timerStore: TimerStore
     @StateObject private var preferencesStore = PreferencesStore()
 
     init() {
         let historyStore = HistoryStore()
+        let notificationManager = NotificationManager()
         _historyStore = StateObject(wrappedValue: historyStore)
-        _timerStore = StateObject(wrappedValue: TimerStore(historyStore: historyStore))
+        _notificationManager = StateObject(wrappedValue: notificationManager)
+        _timerStore = StateObject(wrappedValue: TimerStore(historyStore: historyStore, notificationManager: notificationManager))
     }
 
     var body: some Scene {
@@ -25,7 +28,7 @@ struct JustAboutTimeApp: App {
         }
 
         Settings {
-            PreferencesView(preferencesStore: preferencesStore)
+            PreferencesView(preferencesStore: preferencesStore, notificationManager: notificationManager)
         }
     }
 }

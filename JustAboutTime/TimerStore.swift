@@ -17,6 +17,7 @@ final class TimerStore: ObservableObject {
     private var stateMachine = TimerStateMachine()
     private let presenter: StatusBarPresenter
     private let historyStore: HistoryStore
+    private let notificationManager: NotificationManager
     private let now: @Sendable () -> Date
     private let sleep: Sleep
     private let tickInterval: Duration
@@ -26,12 +27,14 @@ final class TimerStore: ObservableObject {
     init(
         presenter: StatusBarPresenter = StatusBarPresenter(),
         historyStore: HistoryStore = HistoryStore(),
+        notificationManager: NotificationManager = NotificationManager(),
         now: @escaping @Sendable () -> Date = Date.init,
         sleep: @escaping Sleep = { try await Task.sleep(for: $0) },
         tickInterval: Duration = .seconds(1)
     ) {
         self.presenter = presenter
         self.historyStore = historyStore
+        self.notificationManager = notificationManager
         self.now = now
         self.sleep = sleep
         self.tickInterval = tickInterval
@@ -44,6 +47,7 @@ final class TimerStore: ObservableObject {
     func startCountdown(duration: TimeInterval) {
         let currentTime = now()
         send(.startCountdown(duration: duration, now: currentTime), referenceTime: currentTime)
+        requestCountdownAlertsIfNeeded()
     }
 
     func startCountUp() {
@@ -64,6 +68,10 @@ final class TimerStore: ObservableObject {
     func restart() {
         let currentTime = now()
         send(.restart(now: currentTime), referenceTime: currentTime)
+
+        if activeSession?.originalDuration != nil {
+            requestCountdownAlertsIfNeeded()
+        }
     }
 
     func finish() {
@@ -74,7 +82,25 @@ final class TimerStore: ObservableObject {
         let previousSession = stateMachine.session
         let events = stateMachine.send(action)
         persistHistoryIfNeeded(previousSession: previousSession, events: events, completedAt: referenceTime)
+        notifyIfNeeded(previousSession: previousSession, events: events)
         synchronizePresentation(referenceTime: referenceTime, events: events)
+    }
+
+    private func requestCountdownAlertsIfNeeded() {
+        Task { @MainActor [notificationManager] in
+            await notificationManager.prepareForCountdownAlertsIfNeeded()
+        }
+    }
+
+    private func notifyIfNeeded(previousSession: TimerSession?, events: [TimerStateMachine.Event]) {
+        guard events.contains(.countdownCompleted),
+              let duration = previousSession?.originalDuration else {
+            return
+        }
+
+        Task { @MainActor [notificationManager] in
+            await notificationManager.notifyCountdownCompleted(duration: duration)
+        }
     }
 
     private func persistHistoryIfNeeded(
@@ -169,6 +195,7 @@ final class TimerStore: ObservableObject {
             let previousSession = stateMachine.session
             let events = stateMachine.send(.tick(now: currentTime))
             persistHistoryIfNeeded(previousSession: previousSession, events: events, completedAt: currentTime)
+            notifyIfNeeded(previousSession: previousSession, events: events)
             synchronizePresentation(referenceTime: currentTime, events: events)
         }
 
