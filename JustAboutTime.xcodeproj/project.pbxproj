@@ -19,6 +19,8 @@
 		A1000001000000000000000A /* TimerStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000000C /* TimerStoreTests.swift */; };
 		A1000001000000000000000B /* StatusBarPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000000D /* StatusBarPresenter.swift */; };
 		A1000001000000000000000C /* TimerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000000E /* TimerStore.swift */; };
+		A1000001000000000000000D /* PreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000000F /* PreferencesStore.swift */; };
+		A1000001000000000000000E /* PreferencesStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000010 /* PreferencesStoreTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -46,6 +48,8 @@
 		A1000011000000000000000C /* TimerStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerStoreTests.swift; sourceTree = "<group>"; };
 		A1000011000000000000000D /* StatusBarPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarPresenter.swift; sourceTree = "<group>"; };
 		A1000011000000000000000E /* TimerStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerStore.swift; sourceTree = "<group>"; };
+		A1000011000000000000000F /* PreferencesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesStore.swift; sourceTree = "<group>"; };
+		A10000110000000000000010 /* PreferencesStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesStoreTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -85,6 +89,7 @@
 				A10000110000000000000008 /* AppShortcuts.swift */,
 				A10000110000000000000001 /* JustAboutTimeApp.swift */,
 				A10000110000000000000002 /* MenuBarView.swift */,
+				A1000011000000000000000F /* PreferencesStore.swift */,
 				A1000011000000000000000D /* StatusBarPresenter.swift */,
 				A10000110000000000000009 /* TimerMode.swift */,
 				A1000011000000000000000A /* TimerSession.swift */,
@@ -99,6 +104,7 @@
 			sourceTree = "<group>";
 			children = (
 				A10000110000000000000004 /* JustAboutTimeTests.swift */,
+				A10000110000000000000010 /* PreferencesStoreTests.swift */,
 				A1000011000000000000000C /* TimerStoreTests.swift */,
 			);
 		};
@@ -207,6 +213,7 @@
 				A10000010000000000000006 /* AppShortcuts.swift in Sources */,
 				A10000010000000000000001 /* JustAboutTimeApp.swift in Sources */,
 				A10000010000000000000002 /* MenuBarView.swift in Sources */,
+				A1000001000000000000000D /* PreferencesStore.swift in Sources */,
 				A1000001000000000000000B /* StatusBarPresenter.swift in Sources */,
 				A10000010000000000000007 /* TimerMode.swift in Sources */,
 				A10000010000000000000008 /* TimerSession.swift in Sources */,
@@ -220,6 +227,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000010000000000000003 /* JustAboutTimeTests.swift in Sources */,
+				A1000001000000000000000E /* PreferencesStoreTests.swift in Sources */,
 				A1000001000000000000000A /* TimerStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

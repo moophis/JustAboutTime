@@ -117,7 +117,12 @@ struct JustAboutTimeTests {
     @Test func appConfigurationDefinesExpectedDefaults() {
         #expect(AppConfiguration.appDisplayName == "Just About Time")
         #expect(AppConfiguration.menuBarSystemImage == "timer")
-        #expect(AppConfiguration.toggleTimerShortcutName.rawValue == "toggleTimer")
+        #expect(AppConfiguration.defaultPresetDurations == [300, 1_500, 3_000])
+        #expect(AppConfiguration.minimumPresetDuration == 1)
+        #expect(AppConfiguration.maximumPresetDuration == 86_400)
+        #expect(AppConfiguration.startPauseShortcutName.rawValue == "startPauseTimer")
+        #expect(AppConfiguration.restartShortcutName.rawValue == "restartTimer")
+        #expect(AppConfiguration.finishShortcutName.rawValue == "finishTimer")
     }
 
     @Test func infoPlistEnablesAgentMode() throws {
