@@ -6,6 +6,8 @@ struct PreferencesView: View {
     @ObservedObject var preferencesStore: PreferencesStore
     @ObservedObject var notificationManager: NotificationManager
 
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some View {
         Form {
             Section("Countdown Presets") {
@@ -31,17 +33,21 @@ struct PreferencesView: View {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Alerts")
-                        Text(detailText)
+                        Text(notificationManager.preferencesDetailText)
                             .font(.caption)
                             .foregroundStyle(.secondary)
+
+                        if let errorText = notificationManager.preferencesErrorText {
+                            Text(errorText)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
 
                     Spacer()
 
-                    if let actionTitle {
-                        Button(actionTitle) {
-                            performNotificationAction()
-                        }
+                    Button(notificationManager.preferencesActionTitle) {
+                        performNotificationAction()
                     }
                 }
             }
@@ -49,32 +55,12 @@ struct PreferencesView: View {
         .formStyle(.grouped)
         .padding(20)
         .frame(minWidth: 420, minHeight: 320)
-        .task {
+        .task(id: scenePhase) {
+            guard scenePhase == .active else {
+                return
+            }
+
             await notificationManager.refresh()
-        }
-    }
-
-    private var detailText: String {
-        switch notificationManager.authorizationStatus {
-        case .authorized, .provisional, .ephemeral:
-            return "Notification access is enabled for countdown alerts."
-        case .denied:
-            return "Notification access is turned off. Open System Settings to enable alerts later."
-        case .notDetermined:
-            return "Countdown alerts are not allowed yet. Grant access so completed timers can notify you."
-        case .unknown:
-            return "Notification access status is unavailable."
-        }
-    }
-
-    private var actionTitle: String? {
-        switch notificationManager.authorizationStatus {
-        case .notDetermined:
-            return "Allow Notifications"
-        case .denied:
-            return "Open System Settings"
-        case .authorized, .provisional, .ephemeral, .unknown:
-            return "Refresh"
         }
     }
 

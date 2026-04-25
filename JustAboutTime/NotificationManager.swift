@@ -3,6 +3,10 @@ import UserNotifications
 
 @MainActor
 final class NotificationManager: ObservableObject {
+    enum DeliveryError: Equatable {
+        case failedToSchedule
+    }
+
     enum AuthorizationStatus: Equatable {
         case notDetermined
         case denied
@@ -45,6 +49,11 @@ final class NotificationManager: ObservableObject {
         let sound: Bool
     }
 
+    private struct InFlightStatusTask {
+        let token = UUID()
+        let task: Task<AuthorizationStatus, Never>
+    }
+
     struct Client {
         var authorizationStatus: @Sendable () async -> AuthorizationStatus
         var requestAuthorization: @Sendable (UNAuthorizationOptions) async throws -> Bool
@@ -77,25 +86,58 @@ final class NotificationManager: ObservableObject {
     }
 
     @Published private(set) var authorizationStatus: AuthorizationStatus = .notDetermined
+    @Published private(set) var latestDeliveryError: DeliveryError?
 
     private let client: Client
     private var hasLoadedAuthorizationStatus = false
+    private var refreshTask: InFlightStatusTask?
+    private var authorizationTask: InFlightStatusTask?
 
     init(client: Client = .live) {
         self.client = client
     }
 
+    var preferencesDetailText: String {
+        switch authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            return "Notification access is enabled for countdown alerts."
+        case .denied:
+            return "Notification access is turned off. Open System Settings to enable alerts later."
+        case .notDetermined:
+            return "Countdown alerts are not allowed yet. Grant access so completed timers can notify you."
+        case .unknown:
+            return "Notification access status is unavailable."
+        }
+    }
+
+    var preferencesActionTitle: String {
+        switch authorizationStatus {
+        case .notDetermined:
+            return "Allow Notifications"
+        case .denied:
+            return "Open System Settings"
+        case .authorized, .provisional, .ephemeral, .unknown:
+            return "Refresh"
+        }
+    }
+
+    var preferencesErrorText: String? {
+        switch latestDeliveryError {
+        case .failedToSchedule:
+            return "The last countdown alert could not be scheduled."
+        case nil:
+            return nil
+        }
+    }
+
     func refresh() async {
-        authorizationStatus = await client.authorizationStatus()
-        hasLoadedAuthorizationStatus = true
+        _ = await currentAuthorizationStatus(forceRefresh: true)
     }
 
     func prepareForCountdownAlertsIfNeeded() async {
-        if !hasLoadedAuthorizationStatus {
-            await refresh()
-        }
+        let status = await currentAuthorizationStatus(forceRefresh: !hasLoadedAuthorizationStatus)
 
-        guard authorizationStatus == .notDetermined else {
+        guard status == .notDetermined else {
             return
         }
 
@@ -103,16 +145,17 @@ final class NotificationManager: ObservableObject {
     }
 
     func requestAuthorization() async {
-        _ = try? await client.requestAuthorization([.alert, .sound])
-        await refresh()
+        _ = await authorizedStatus()
     }
 
     func notifyCountdownCompleted(duration: TimeInterval) async {
-        if !hasLoadedAuthorizationStatus {
-            await refresh()
+        var status = await currentAuthorizationStatus(forceRefresh: true)
+
+        if status == .notDetermined {
+            status = await authorizedStatus()
         }
 
-        guard authorizationStatus.allowsDelivery else {
+        guard status.allowsDelivery else {
             return
         }
 
@@ -123,7 +166,55 @@ final class NotificationManager: ObservableObject {
             sound: true
         )
 
-        try? await client.add(request)
+        do {
+            try await client.add(request)
+            latestDeliveryError = nil
+        } catch {
+            latestDeliveryError = .failedToSchedule
+        }
+    }
+
+    private func currentAuthorizationStatus(forceRefresh: Bool) async -> AuthorizationStatus {
+        if !forceRefresh, let refreshTask {
+            return await refreshTask.task.value
+        }
+
+        let inFlightTask = InFlightStatusTask(task: Task { [client] in
+            await client.authorizationStatus()
+        })
+        refreshTask = inFlightTask
+
+        let status = await inFlightTask.task.value
+
+        if refreshTask?.token == inFlightTask.token {
+            refreshTask = nil
+        }
+
+        authorizationStatus = status
+        hasLoadedAuthorizationStatus = true
+        return status
+    }
+
+    private func authorizedStatus() async -> AuthorizationStatus {
+        if let authorizationTask {
+            return await authorizationTask.task.value
+        }
+
+        let inFlightTask = InFlightStatusTask(task: Task { [client] in
+            _ = try? await client.requestAuthorization([.alert, .sound])
+            return await client.authorizationStatus()
+        })
+        authorizationTask = inFlightTask
+
+        let status = await inFlightTask.task.value
+
+        if authorizationTask?.token == inFlightTask.token {
+            authorizationTask = nil
+        }
+
+        authorizationStatus = status
+        hasLoadedAuthorizationStatus = true
+        return status
     }
 
     private func formattedDuration(_ duration: TimeInterval) -> String {

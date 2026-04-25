@@ -233,6 +233,8 @@ struct JustAboutTimeTests {
         #expect(source.contains("Section(\"Countdown Presets\")"))
         #expect(source.contains("KeyboardShortcuts.Recorder(for: name)"))
         #expect(source.contains("Section(\"Notifications\")"))
+        #expect(source.contains("@Environment(\\.scenePhase) private var scenePhase"))
+        #expect(source.contains(".task(id: scenePhase)"))
         #expect(source.contains("if let settingsURL = URL("))
         #expect(source.contains("Notifications-Settings.extension\")!)") == false)
     }

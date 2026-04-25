@@ -47,7 +47,6 @@ final class TimerStore: ObservableObject {
     func startCountdown(duration: TimeInterval) {
         let currentTime = now()
         send(.startCountdown(duration: duration, now: currentTime), referenceTime: currentTime)
-        requestCountdownAlertsIfNeeded()
     }
 
     func startCountUp() {
@@ -68,10 +67,6 @@ final class TimerStore: ObservableObject {
     func restart() {
         let currentTime = now()
         send(.restart(now: currentTime), referenceTime: currentTime)
-
-        if activeSession?.originalDuration != nil {
-            requestCountdownAlertsIfNeeded()
-        }
     }
 
     func finish() {
@@ -84,12 +79,6 @@ final class TimerStore: ObservableObject {
         persistHistoryIfNeeded(previousSession: previousSession, events: events, completedAt: referenceTime)
         notifyIfNeeded(previousSession: previousSession, events: events)
         synchronizePresentation(referenceTime: referenceTime, events: events)
-    }
-
-    private func requestCountdownAlertsIfNeeded() {
-        Task { @MainActor [notificationManager] in
-            await notificationManager.prepareForCountdownAlertsIfNeeded()
-        }
     }
 
     private func notifyIfNeeded(previousSession: TimerSession?, events: [TimerStateMachine.Event]) {

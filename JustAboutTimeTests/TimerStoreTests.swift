@@ -79,6 +79,21 @@ struct TimerStoreTests {
     }
 
     @MainActor
+    @Test func countdownStartAndRestartDoNotRequestNotificationsEarly() async {
+        let center = TestNotificationCenter(initialStatus: .notDetermined)
+        let notificationManager = NotificationManager(client: center.makeClient())
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let store = TimerStore(notificationManager: notificationManager, now: { clock.now })
+
+        store.startCountdown(duration: 90)
+        store.restart()
+        await Task.yield()
+
+        #expect(await center.authorizationRequestCount == 0)
+        #expect(await center.requests.isEmpty)
+    }
+
+    @MainActor
     @Test func timerStoreSurfacesCountdownCompletionEvents() async throws {
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
         let sleeper = TestSleeper()
@@ -316,10 +331,11 @@ private actor TestNotificationCenter {
             },
             requestAuthorization: { [weak self] _ in
                 await self?.recordAuthorizationRequest()
+                await self?.setStatus(.authorized)
                 return true
             },
             add: { [weak self] request in
-                await self?.appendRequest(request)
+                try await self?.add(request)
             }
         )
     }
@@ -328,7 +344,11 @@ private actor TestNotificationCenter {
         authorizationRequestCount += 1
     }
 
-    func appendRequest(_ request: NotificationManager.Request) {
+    func setStatus(_ newStatus: NotificationManager.AuthorizationStatus) {
+        status = newStatus
+    }
+
+    func add(_ request: NotificationManager.Request) throws {
         requests.append(request)
     }
 }
