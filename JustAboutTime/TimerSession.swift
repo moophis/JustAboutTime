@@ -41,9 +41,9 @@ struct TimerSession: Equatable {
 
             return max(0, originalDuration - remaining)
         case let .runningCountUp(startedAt, accumulated):
-            return accumulated + now.timeIntervalSince(startedAt)
+            return max(0, accumulated + max(0, now.timeIntervalSince(startedAt)))
         case let .pausedCountUp(accumulated):
-            return accumulated
+            return max(0, accumulated)
         }
     }
 }

@@ -72,6 +72,39 @@ struct JustAboutTimeTests {
         #expect(machine.state == .idle)
     }
 
+    @Test func zeroCountdownCompletesImmediately() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        var machine = TimerStateMachine()
+
+        let events = machine.send(.startCountdown(duration: 0, now: start))
+
+        #expect(events == [.countdownCompleted])
+        #expect(machine.state == .idle)
+    }
+
+    @Test func negativeCountdownCompletesImmediately() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        var machine = TimerStateMachine()
+
+        let events = machine.send(.startCountdown(duration: -5, now: start))
+
+        #expect(events == [.countdownCompleted])
+        #expect(machine.state == .idle)
+    }
+
+    @Test func countUpNeverGoesNegativeWhenTimeMovesBackward() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        var machine = TimerStateMachine()
+
+        _ = machine.send(.startCountUp(now: start))
+
+        #expect(machine.session?.elapsedTime(at: start.addingTimeInterval(-10)) == 0)
+
+        _ = machine.send(.pause(now: start.addingTimeInterval(-10)))
+
+        #expect(machine.session?.elapsedTime(at: start.addingTimeInterval(5)) == 0)
+    }
+
     @Test func appConfigurationDefinesExpectedDefaults() {
         #expect(AppConfiguration.appDisplayName == "Just About Time")
         #expect(AppConfiguration.menuBarSystemImage == "timer")

@@ -34,6 +34,11 @@ struct TimerStateMachine: Equatable {
     mutating func send(_ action: Action) -> [Event] {
         switch action {
         case let .startCountdown(duration, now):
+            if duration <= 0 {
+                state = .idle
+                return [.countdownCompleted]
+            }
+
             state = .active(TimerSession(mode: .countdown(duration: duration), phase: .runningCountdown(targetDate: now.addingTimeInterval(duration))))
             return []
 
@@ -58,7 +63,7 @@ struct TimerStateMachine: Equatable {
                 return []
 
             case let .runningCountUp(startedAt, accumulated):
-                state = .active(TimerSession(mode: session.mode, phase: .pausedCountUp(accumulated: accumulated + now.timeIntervalSince(startedAt))))
+                state = .active(TimerSession(mode: session.mode, phase: .pausedCountUp(accumulated: max(0, accumulated + max(0, now.timeIntervalSince(startedAt))))))
                 return []
 
             case .pausedCountdown, .pausedCountUp:
