@@ -72,6 +72,15 @@ struct JustAboutTimeTests {
         #expect(machine.state == .idle)
     }
 
+    @Test func countdownElapsedTimeStopsAtOriginalDuration() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        var machine = TimerStateMachine()
+
+        _ = machine.send(.startCountdown(duration: 5, now: start))
+
+        #expect(machine.session?.elapsedTime(at: start.addingTimeInterval(10)) == 5)
+    }
+
     @Test func zeroCountdownCompletesImmediately() {
         let start = Date(timeIntervalSinceReferenceDate: 1_000)
         var machine = TimerStateMachine()

@@ -33,7 +33,7 @@ struct TimerSession: Equatable {
                 return 0
             }
 
-            return max(0, originalDuration - targetDate.timeIntervalSince(now))
+            return min(originalDuration, max(0, originalDuration - targetDate.timeIntervalSince(now)))
         case let .pausedCountdown(remaining):
             guard let originalDuration else {
                 return 0
