@@ -151,15 +151,24 @@ struct JustAboutTimeTests {
     @Test func appEntrypointUsesMenuBarExtraWithoutWindowGroup() throws {
         let appSource = try source(at: projectFilePath("JustAboutTime/JustAboutTimeApp.swift"))
 
-        #expect(appSource.contains("MenuBarExtra("))
+        #expect(appSource.contains("MenuBarExtra"))
         #expect(appSource.contains("WindowGroup") == false)
-        #expect(appSource.contains("MenuBarView(timerStore: timerStore)"))
+        #expect(appSource.contains("MenuBarView(timerStore: timerStore, preferencesStore: preferencesStore)"))
+        #expect(appSource.contains("StatusBarLabelView(presentation: timerStore.statusPresentation)"))
+        #expect(appSource.contains("Window(\"History\", id: HistoryWindow.id)"))
+        #expect(appSource.contains("Settings {"))
     }
 
     @Test func menuBarViewAcceptsTimerStore() throws {
         let menuSource = try source(at: projectFilePath("JustAboutTime/MenuBarView.swift"))
 
         #expect(menuSource.contains("timerStore: TimerStore"))
+    }
+
+    @Test func menuBarViewAcceptsPreferencesStore() throws {
+        let menuSource = try source(at: projectFilePath("JustAboutTime/MenuBarView.swift"))
+
+        #expect(menuSource.contains("preferencesStore: PreferencesStore"))
     }
 
     @Test func menuBarViewObservesTimerStore() throws {
@@ -173,6 +182,25 @@ struct JustAboutTimeTests {
 
         #expect(menuSource.contains("Button(\"Quit"))
         #expect(menuSource.contains("NSApplication.shared.terminate(nil)"))
+    }
+
+    @Test func idleMenuIncludesPresetActionsAndEntryPoints() throws {
+        let menuSource = try source(at: projectFilePath("JustAboutTime/MenuBarView.swift"))
+
+        #expect(menuSource.contains("preferencesStore.presetDurations.enumerated()"))
+        #expect(menuSource.contains("Button(\"Count Up\")"))
+        #expect(menuSource.contains("Button(\"Open History…\")"))
+        #expect(menuSource.contains("SettingsLink"))
+    }
+
+    @Test func activeMenuIncludesTimerControlsAndSummary() throws {
+        let menuSource = try source(at: projectFilePath("JustAboutTime/MenuBarView.swift"))
+
+        #expect(menuSource.contains("Button(isRunning(session) ? \"Pause\" : \"Resume\")"))
+        #expect(menuSource.contains("Button(\"Restart\")"))
+        #expect(menuSource.contains("Button(\"Finish\")"))
+        #expect(menuSource.contains("Text(summaryTitle(for: session))"))
+        #expect(menuSource.contains("Text(summarySubtitle(for: session))"))
     }
 
     @Test func projectKeepsKeyboardShortcutsPackageAndNoAppIconSetting() throws {
