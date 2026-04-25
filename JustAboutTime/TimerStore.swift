@@ -15,6 +15,7 @@ final class TimerStore: ObservableObject {
     }
 
     @Published private(set) var activeSession: TimerSession?
+    @Published private(set) var statusText: String = "00:00"
     @Published private(set) var statusPresentation: TimerStatusPresentation
     @Published private(set) var latestEvent: Event?
     @Published private(set) var latestHistoryError: HistoryStore.HistoryError?
@@ -192,6 +193,7 @@ final class TimerStore: ObservableObject {
 
         activeSession = session
         latestEvent = events.last.map(Event.init)
+        statusText = presenter.presentation(for: snapshot(for: session, referenceTime: referenceTime), animationStep: animationStep).text
         statusPresentation = presenter.presentation(for: snapshot(for: session, referenceTime: referenceTime), animationStep: animationStep)
         updateTickTask(for: session)
     }

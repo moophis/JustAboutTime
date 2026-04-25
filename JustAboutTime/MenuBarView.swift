@@ -8,8 +8,8 @@ struct MenuBarView: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        if let session = timerStore.activeSession {
-            activeMenu(for: session)
+        if timerStore.activeSession != nil {
+            activeMenu
         } else {
             idleMenu
         }
@@ -39,14 +39,8 @@ struct MenuBarView: View {
     }
 
     @ViewBuilder
-    private func activeMenu(for session: TimerSession) -> some View {
-        Button(isRunning(session) ? "Pause" : "Resume") {
-            if isRunning(session) {
-                timerStore.pause()
-            } else {
-                timerStore.resume()
-            }
-        }
+    private var activeMenu: some View {
+        pauseButton
 
         Button("Restart") {
             timerStore.restart()
@@ -57,9 +51,8 @@ struct MenuBarView: View {
         }
 
         Divider()
-        Text(summaryTitle(for: session))
-        Text(summarySubtitle(for: session))
-            .foregroundStyle(.secondary)
+        timerInfo
+        StableTimerStatusView(timerStore: timerStore)
 
         Divider()
         historyButton
@@ -69,6 +62,38 @@ struct MenuBarView: View {
 
         Divider()
         quitButton
+    }
+
+    private var pauseButton: some View {
+        let isRunning = timerStore.activeSession.map { session in
+            switch session.phase {
+            case .runningCountdown, .runningCountUp:
+                return true
+            case .pausedCountdown, .pausedCountUp:
+                return false
+            }
+        } ?? false
+
+        return Button(isRunning ? "Pause" : "Resume") {
+            if isRunning {
+                timerStore.pause()
+            } else {
+                timerStore.resume()
+            }
+        }
+    }
+
+    private var timerInfo: some View {
+        Group {
+            if let session = timerStore.activeSession {
+                switch session.mode {
+                case let .countdown(duration):
+                    Text("Countdown • \(formattedDuration(duration))")
+                case .countUp:
+                    Text("Count Up")
+                }
+            }
+        }
     }
 
     private var historyButton: some View {
@@ -88,29 +113,6 @@ struct MenuBarView: View {
         "Start \(formattedDuration(duration)) Countdown"
     }
 
-    private func summaryTitle(for session: TimerSession) -> String {
-        switch session.mode {
-        case let .countdown(duration):
-            return "Countdown • \(formattedDuration(duration))"
-        case .countUp:
-            return "Count Up"
-        }
-    }
-
-    private func summarySubtitle(for session: TimerSession) -> String {
-        let status = isRunning(session) ? "Running" : "Paused"
-        return "\(status) • \(timerStore.statusPresentation.text)"
-    }
-
-    private func isRunning(_ session: TimerSession) -> Bool {
-        switch session.phase {
-        case .runningCountdown, .runningCountUp:
-            return true
-        case .pausedCountdown, .pausedCountUp:
-            return false
-        }
-    }
-
     private func formattedDuration(_ duration: TimeInterval) -> String {
         let totalMinutes = Int(duration.rounded(.down)) / 60
         let hours = totalMinutes / 60
@@ -121,5 +123,74 @@ struct MenuBarView: View {
         }
 
         return "\(minutes)m"
+    }
+}
+
+private struct StableTimerStatusView: NSViewRepresentable {
+    @ObservedObject var timerStore: TimerStore
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(timerStore: timerStore)
+    }
+
+    func makeNSView(context: Context) -> NSView {
+        let view = StableStatusTextView()
+        context.coordinator.textView = view
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        context.coordinator.updateStatusText()
+    }
+
+    @MainActor
+    class Coordinator: NSObject {
+        let timerStore: TimerStore
+        weak var textView: StableStatusTextView?
+
+        init(timerStore: TimerStore) {
+            self.timerStore = timerStore
+            super.init()
+        }
+
+        func updateStatusText() {
+            let isRunning = timerStore.activeSession.map { session in
+                switch session.phase {
+                case .runningCountdown, .runningCountUp:
+                    return true
+                case .pausedCountdown, .pausedCountUp:
+                    return false
+                }
+            } ?? false
+
+            let status = isRunning ? "Running" : "Paused"
+            textView?.updateText("\(status) • \(timerStore.statusText)")
+        }
+    }
+}
+
+@MainActor
+private class StableStatusTextView: NSView {
+    private let textField: NSTextField
+
+    override init(frame frameRect: NSRect) {
+        textField = NSTextField(labelWithString: "")
+        textField.textColor = .secondaryLabelColor
+        textField.font = .systemFont(ofSize: NSFont.systemFontSize)
+        super.init(frame: frameRect)
+        textField.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(textField)
+        NSLayoutConstraint.activate([
+            textField.leadingAnchor.constraint(equalTo: leadingAnchor),
+            textField.centerYAnchor.constraint(equalTo: centerYAnchor)
+        ])
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func updateText(_ text: String) {
+        textField.stringValue = text
     }
 }
