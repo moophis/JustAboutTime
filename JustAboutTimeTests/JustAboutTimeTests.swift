@@ -242,6 +242,13 @@ struct JustAboutTimeTests {
         #expect(source.contains("Notifications-Settings.extension\")!)") == false)
     }
 
+    @Test func shortcutManagerUsesKeyboardShortcutsGlobalKeyUpHandler() throws {
+        let source = try source(at: projectFilePath("JustAboutTime/ShortcutManager.swift"))
+
+        #expect(source.contains("KeyboardShortcuts.onKeyUp(for: name)"))
+        #expect(source.contains("client: Client = .live"))
+    }
+
     @Test func historyViewIncludesErrorStateBannerAndTable() throws {
         let source = try source(at: projectFilePath("JustAboutTime/HistoryView.swift"))
 

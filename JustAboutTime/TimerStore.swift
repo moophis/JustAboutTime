@@ -28,6 +28,8 @@ final class TimerStore: ObservableObject {
     private let tickInterval: Duration
     private var repeatableStartMode: RepeatableStartMode?
     private var animationStep = 0
+    private var tickTaskGeneration = 0
+    private var currentTickTaskGeneration: Int?
     private var tickTask: Task<Void, Never>?
 
     init(
@@ -191,6 +193,7 @@ final class TimerStore: ObservableObject {
         guard session?.isRunning == true else {
             tickTask?.cancel()
             tickTask = nil
+            currentTickTaskGeneration = nil
             return
         }
 
@@ -198,12 +201,16 @@ final class TimerStore: ObservableObject {
             return
         }
 
+        tickTaskGeneration += 1
+        let generation = tickTaskGeneration
+        currentTickTaskGeneration = generation
+
         tickTask = Task { @MainActor [weak self] in
-            await self?.runTickLoop()
+            await self?.runTickLoop(generation: generation)
         }
     }
 
-    private func runTickLoop() async {
+    private func runTickLoop(generation: Int) async {
         while !Task.isCancelled {
             do {
                 try await sleep(tickInterval)
@@ -226,7 +233,12 @@ final class TimerStore: ObservableObject {
             synchronizePresentation(referenceTime: currentTime, events: events)
         }
 
+        guard currentTickTaskGeneration == generation else {
+            return
+        }
+
         tickTask = nil
+        currentTickTaskGeneration = nil
     }
 }
 

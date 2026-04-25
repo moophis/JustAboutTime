@@ -198,20 +198,73 @@ struct TimerStoreTests {
         #expect(registry.registeredNames == AppShortcuts.allNames.map(\.rawValue).sorted())
 
         store.startCountdown(duration: 90)
+        #expect(store.statusPresentation.text == "01:30")
+        #expect(store.statusPresentation.dotPhase == .leading)
+
         clock.advance(by: 15)
         registry.press(AppShortcuts.startPauseTimer)
         #expect(store.activeSession?.phase.isPaused == true)
+        #expect(store.statusPresentation.text == "01:15")
+        #expect(store.statusPresentation.dotPhase == .hidden)
 
         registry.press(AppShortcuts.restartTimer)
         #expect(store.statusPresentation.text == "01:30")
         #expect(store.activeSession?.phase.isRunning == true)
+        #expect(store.statusPresentation.dotPhase == .leading)
 
         registry.press(AppShortcuts.finishTimer)
         #expect(store.activeSession == nil)
+        #expect(store.statusPresentation.text == "00:00")
+        #expect(store.statusPresentation.dotPhase == .hidden)
 
         clock.advance(by: 10)
         registry.press(AppShortcuts.startPauseTimer)
         #expect(store.activeSession?.mode == .countdown(duration: 90))
+        #expect(store.statusPresentation.text == "01:30")
+        #expect(store.statusPresentation.dotPhase == .leading)
+
+        withExtendedLifetime(manager) {}
+    }
+
+    @MainActor
+    @Test func rapidShortcutPauseResumeKeepsSingleActiveTickLoop() async {
+        let registry = TestShortcutRegistry()
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let sleeper = TestSleeper()
+        let store = TimerStore(now: { clock.now }, sleep: sleeper.sleep(for:))
+        let manager = ShortcutManager(
+            timerStore: store,
+            client: .init(onKeyUp: { name, handler in
+                registry.register(handler: handler, for: name)
+            })
+        )
+
+        store.startCountUp()
+        await sleeper.waitForContinuationCount(1)
+
+        registry.press(AppShortcuts.startPauseTimer)
+        #expect(store.activeSession?.phase.isPaused == true)
+
+        registry.press(AppShortcuts.startPauseTimer)
+        #expect(store.activeSession?.phase.isRunning == true)
+
+        await sleeper.waitForContinuationCount(2)
+
+        await sleeper.resumeOnce()
+        await Task.yield()
+
+        clock.advance(by: 1)
+        await sleeper.resumeOnce()
+
+        while store.statusPresentation.text != "00:01" {
+            await Task.yield()
+        }
+
+        await sleeper.waitForMinimumContinuationCount(1)
+
+        #expect(store.statusPresentation.text == "00:01")
+        #expect(store.activeSession?.phase.isRunning == true)
+        #expect(await sleeper.pendingContinuationCount() == 1)
 
         withExtendedLifetime(manager) {}
     }
@@ -496,6 +549,22 @@ private actor TestSleeper {
         await withCheckedContinuation { continuation in
             continuations.append(continuation)
         }
+    }
+
+    func waitForContinuationCount(_ count: Int) async {
+        while continuations.count < count {
+            await Task.yield()
+        }
+    }
+
+    func waitForMinimumContinuationCount(_ count: Int) async {
+        while continuations.count < count {
+            await Task.yield()
+        }
+    }
+
+    func pendingContinuationCount() -> Int {
+        continuations.count
     }
 
     func resumeOnce() async {
