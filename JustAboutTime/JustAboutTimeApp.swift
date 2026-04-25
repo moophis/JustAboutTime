@@ -2,8 +2,10 @@ import SwiftUI
 
 @main
 struct JustAboutTimeApp: App {
+    @StateObject private var timerStore = TimerStore()
+
     var body: some Scene {
-        MenuBarExtra(AppConfiguration.appDisplayName, systemImage: AppConfiguration.menuBarSystemImage) {
+        MenuBarExtra(timerStore.statusPresentation.text, systemImage: AppConfiguration.menuBarSystemImage) {
             MenuBarView()
         }
         .menuBarExtraStyle(.menu)
