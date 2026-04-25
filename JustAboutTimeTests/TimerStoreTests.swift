@@ -82,8 +82,8 @@ struct TimerStoreTests {
             .store(in: &cancellables)
 
         store.startCountUp()
-        await sleeper.resumeOnce()
         clock.advance(by: 1)
+        await sleeper.resumeOnce()
 
         var tickWasPublishedOnMainThread: Bool?
 
@@ -122,9 +122,9 @@ private actor TestSleeper {
         }
     }
 
-    func resumeOnce() {
-        guard !continuations.isEmpty else {
-            return
+    func resumeOnce() async {
+        while continuations.isEmpty {
+            await Task.yield()
         }
 
         let continuation = continuations.removeFirst()
