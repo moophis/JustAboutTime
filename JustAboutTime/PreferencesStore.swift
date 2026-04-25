@@ -1,7 +1,9 @@
+import Combine
 import Foundation
 import KeyboardShortcuts
 
-final class PreferencesStore {
+@MainActor
+final class PreferencesStore: ObservableObject {
     enum PreferencesError: Error, Equatable {
         case invalidPresetCount(Int)
         case invalidPresetDuration(index: Int, value: TimeInterval)
@@ -13,7 +15,7 @@ final class PreferencesStore {
 
     private let userDefaults: UserDefaults
 
-    private(set) var presetDurations: [TimeInterval]
+    @Published private(set) var presetDurations: [TimeInterval]
     let shortcutNames: [KeyboardShortcuts.Name]
 
     init(userDefaults: UserDefaults = .standard) {

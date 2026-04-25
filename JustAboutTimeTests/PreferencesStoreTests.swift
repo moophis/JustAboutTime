@@ -1,10 +1,33 @@
+import Combine
 import Foundation
 import KeyboardShortcuts
 import Testing
 
 @testable import JustAboutTime
 
+@MainActor
 struct PreferencesStoreTests {
+    @Test func presetDurationsArePublishedWhenChanged() async throws {
+        let userDefaults = makeUserDefaults()
+        let store = PreferencesStore(userDefaults: userDefaults)
+        let stream = AsyncStream.makeStream(of: [TimeInterval].self)
+        var cancellables = Set<AnyCancellable>()
+        var iterator = stream.stream.makeAsyncIterator()
+
+        store.$presetDurations
+            .dropFirst()
+            .sink { durations in
+                stream.continuation.yield(durations)
+            }
+            .store(in: &cancellables)
+
+        try store.setPresetDurations([60, 120, 180])
+
+        let publishedDurations = try #require(await iterator.next())
+
+        #expect(publishedDurations == [60, 120, 180])
+    }
+
     @Test func firstLaunchLoadsDefaultPresetDurations() {
         let userDefaults = makeUserDefaults()
         let store = PreferencesStore(userDefaults: userDefaults)

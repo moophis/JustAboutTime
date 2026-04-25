@@ -155,6 +155,7 @@ struct JustAboutTimeTests {
         #expect(appSource.contains("WindowGroup") == false)
         #expect(appSource.contains("MenuBarView(timerStore: timerStore, preferencesStore: preferencesStore)"))
         #expect(appSource.contains("StatusBarLabelView(presentation: timerStore.statusPresentation)"))
+        #expect(appSource.contains("@StateObject private var preferencesStore = PreferencesStore()"))
         #expect(appSource.contains("Window(\"History\", id: HistoryWindow.id)"))
         #expect(appSource.contains("Settings {"))
     }
@@ -169,6 +170,7 @@ struct JustAboutTimeTests {
         let menuSource = try source(at: projectFilePath("JustAboutTime/MenuBarView.swift"))
 
         #expect(menuSource.contains("preferencesStore: PreferencesStore"))
+        #expect(menuSource.contains("@ObservedObject var preferencesStore: PreferencesStore"))
     }
 
     @Test func menuBarViewObservesTimerStore() throws {
@@ -201,6 +203,14 @@ struct JustAboutTimeTests {
         #expect(menuSource.contains("Button(\"Finish\")"))
         #expect(menuSource.contains("Text(summaryTitle(for: session))"))
         #expect(menuSource.contains("Text(summarySubtitle(for: session))"))
+    }
+
+    @Test func statusBarLabelKeepsFixedDotSlots() throws {
+        let appSource = try source(at: projectFilePath("JustAboutTime/JustAboutTimeApp.swift"))
+
+        #expect(appSource.contains("dotSlot(isVisible: presentation.dotPhase == .leading)"))
+        #expect(appSource.contains("dotSlot(isVisible: presentation.dotPhase == .trailing)"))
+        #expect(appSource.contains(".opacity(isVisible ? 1 : 0)"))
     }
 
     @Test func projectKeepsKeyboardShortcutsPackageAndNoAppIconSetting() throws {

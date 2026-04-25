@@ -3,7 +3,7 @@ import SwiftUI
 @main
 struct JustAboutTimeApp: App {
     @StateObject private var timerStore = TimerStore()
-    private let preferencesStore = PreferencesStore()
+    @StateObject private var preferencesStore = PreferencesStore()
 
     var body: some Scene {
         MenuBarExtra {
@@ -40,22 +40,19 @@ private struct StatusBarLabelView: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            if presentation.dotPhase == .leading {
-                dot
-            }
+            dotSlot(isVisible: presentation.dotPhase == .leading)
 
             Text(presentation.text)
                 .monospacedDigit()
 
-            if presentation.dotPhase == .trailing {
-                dot
-            }
+            dotSlot(isVisible: presentation.dotPhase == .trailing)
         }
     }
 
-    private var dot: some View {
+    private func dotSlot(isVisible: Bool) -> some View {
         Circle()
             .frame(width: 6, height: 6)
+            .opacity(isVisible ? 1 : 0)
     }
 }
 

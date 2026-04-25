@@ -3,7 +3,7 @@ import SwiftUI
 
 struct MenuBarView: View {
     @ObservedObject var timerStore: TimerStore
-    let preferencesStore: PreferencesStore
+    @ObservedObject var preferencesStore: PreferencesStore
 
     @Environment(\.openWindow) private var openWindow
 
