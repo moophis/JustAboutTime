@@ -15,6 +15,7 @@ final class TimerStore: ObservableObject {
 
     private var stateMachine = TimerStateMachine()
     private let presenter: StatusBarPresenter
+    private let historyStore: HistoryStore
     private let now: @Sendable () -> Date
     private let sleep: Sleep
     private let tickInterval: Duration
@@ -23,11 +24,13 @@ final class TimerStore: ObservableObject {
 
     init(
         presenter: StatusBarPresenter = StatusBarPresenter(),
+        historyStore: HistoryStore = HistoryStore(),
         now: @escaping @Sendable () -> Date = Date.init,
         sleep: @escaping Sleep = { try await Task.sleep(for: $0) },
         tickInterval: Duration = .seconds(1)
     ) {
         self.presenter = presenter
+        self.historyStore = historyStore
         self.now = now
         self.sleep = sleep
         self.tickInterval = tickInterval
@@ -66,8 +69,28 @@ final class TimerStore: ObservableObject {
     }
 
     private func send(_ action: TimerStateMachine.Action, referenceTime: Date) {
+        let previousSession = stateMachine.session
         let events = stateMachine.send(action)
+        persistHistoryIfNeeded(previousSession: previousSession, events: events, completedAt: referenceTime)
         synchronizePresentation(referenceTime: referenceTime, events: events)
+    }
+
+    private func persistHistoryIfNeeded(
+        previousSession: TimerSession?,
+        events: [TimerStateMachine.Event],
+        completedAt: Date
+    ) {
+        guard events.contains(.countdownCompleted),
+              let session = previousSession,
+              let presetDuration = session.originalDuration else {
+            return
+        }
+
+        historyStore.recordCompletedCountdown(
+            presetDuration: presetDuration,
+            startedAt: session.startedAt,
+            completedAt: completedAt
+        )
     }
 
     private func synchronizePresentation(referenceTime: Date, events: [TimerStateMachine.Event] = []) {
@@ -134,7 +157,9 @@ final class TimerStore: ObservableObject {
 
             let currentTime = now()
             animationStep += 1
+            let previousSession = stateMachine.session
             let events = stateMachine.send(.tick(now: currentTime))
+            persistHistoryIfNeeded(previousSession: previousSession, events: events, completedAt: currentTime)
             synchronizePresentation(referenceTime: currentTime, events: events)
         }
 

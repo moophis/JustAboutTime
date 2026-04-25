@@ -132,6 +132,35 @@ struct TimerStoreTests {
         #expect(publishedOnMainThread)
         #expect(store.statusPresentation.text == "00:01")
     }
+
+    @MainActor
+    @Test func timerStorePersistsCompletedCountdownsOnly() async throws {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let sleeper = TestSleeper()
+        let directoryURL = try makeTemporaryDirectory()
+        let historyStore = HistoryStore(fileURL: directoryURL.appendingPathComponent("history.json"))
+        let store = TimerStore(historyStore: historyStore, now: { clock.now }, sleep: sleeper.sleep(for:))
+
+        store.startCountUp()
+        store.finish()
+        #expect(historyStore.loadEntries().isEmpty)
+
+        store.startCountdown(duration: 90)
+        clock.advance(by: 90)
+        await sleeper.resumeOnce()
+
+        while store.latestEvent == nil, store.activeSession != nil {
+            await Task.yield()
+        }
+
+        let entries = historyStore.loadEntries()
+        let entry = try #require(entries.first)
+
+        #expect(entries.count == 1)
+        #expect(entry.presetDuration == 90)
+        #expect(entry.startedAt == Date(timeIntervalSinceReferenceDate: 1_000))
+        #expect(entry.completedAt == Date(timeIntervalSinceReferenceDate: 1_090))
+    }
 }
 
 private final class TestClock: @unchecked Sendable {
@@ -179,4 +208,10 @@ private actor TestSleeper {
         let continuation = continuations.removeFirst()
         continuation.resume()
     }
+}
+
+private func makeTemporaryDirectory() throws -> URL {
+    let directoryURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+    return directoryURL
 }

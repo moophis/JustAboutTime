@@ -8,6 +8,7 @@ struct TimerSession: Equatable {
         case pausedCountUp(accumulated: TimeInterval)
     }
 
+    let startedAt: Date
     let mode: TimerMode
     var phase: Phase
 

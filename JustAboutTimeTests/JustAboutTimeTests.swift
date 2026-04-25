@@ -12,7 +12,15 @@ struct JustAboutTimeTests {
         let events = machine.send(.startCountdown(duration: 300, now: now))
 
         #expect(events.isEmpty)
-        #expect(machine.state == .active(TimerSession(mode: .countdown(duration: 300), phase: .runningCountdown(targetDate: now.addingTimeInterval(300)))))
+        #expect(
+            machine.state == .active(
+                TimerSession(
+                    startedAt: now,
+                    mode: .countdown(duration: 300),
+                    phase: .runningCountdown(targetDate: now.addingTimeInterval(300))
+                )
+            )
+        )
     }
 
     @Test func pauseAndResumePreserveRemainingCountdownTime() {
@@ -37,7 +45,15 @@ struct JustAboutTimeTests {
         _ = machine.send(.pause(now: start.addingTimeInterval(30)))
         _ = machine.send(.restart(now: start.addingTimeInterval(70)))
 
-        #expect(machine.state == .active(TimerSession(mode: .countdown(duration: 120), phase: .runningCountdown(targetDate: start.addingTimeInterval(190)))))
+        #expect(
+            machine.state == .active(
+                TimerSession(
+                    startedAt: start.addingTimeInterval(70),
+                    mode: .countdown(duration: 120),
+                    phase: .runningCountdown(targetDate: start.addingTimeInterval(190))
+                )
+            )
+        )
     }
 
     @Test func countUpAdvancesFromZero() {

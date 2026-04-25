@@ -39,11 +39,17 @@ struct TimerStateMachine: Equatable {
                 return [.countdownCompleted]
             }
 
-            state = .active(TimerSession(mode: .countdown(duration: duration), phase: .runningCountdown(targetDate: now.addingTimeInterval(duration))))
+            state = .active(
+                TimerSession(
+                    startedAt: now,
+                    mode: .countdown(duration: duration),
+                    phase: .runningCountdown(targetDate: now.addingTimeInterval(duration))
+                )
+            )
             return []
 
         case let .startCountUp(now):
-            state = .active(TimerSession(mode: .countUp, phase: .runningCountUp(startedAt: now, accumulated: 0)))
+            state = .active(TimerSession(startedAt: now, mode: .countUp, phase: .runningCountUp(startedAt: now, accumulated: 0)))
             return []
 
         case let .pause(now):
@@ -59,11 +65,17 @@ struct TimerStateMachine: Equatable {
                     return [.countdownCompleted]
                 }
 
-                state = .active(TimerSession(mode: session.mode, phase: .pausedCountdown(remaining: remaining)))
+                state = .active(TimerSession(startedAt: session.startedAt, mode: session.mode, phase: .pausedCountdown(remaining: remaining)))
                 return []
 
             case let .runningCountUp(startedAt, accumulated):
-                state = .active(TimerSession(mode: session.mode, phase: .pausedCountUp(accumulated: max(0, accumulated + max(0, now.timeIntervalSince(startedAt))))))
+                state = .active(
+                    TimerSession(
+                        startedAt: session.startedAt,
+                        mode: session.mode,
+                        phase: .pausedCountUp(accumulated: max(0, accumulated + max(0, now.timeIntervalSince(startedAt))))
+                    )
+                )
                 return []
 
             case .pausedCountdown, .pausedCountUp:
@@ -77,11 +89,23 @@ struct TimerStateMachine: Equatable {
 
             switch session.phase {
             case let .pausedCountdown(remaining):
-                state = .active(TimerSession(mode: session.mode, phase: .runningCountdown(targetDate: now.addingTimeInterval(remaining))))
+                state = .active(
+                    TimerSession(
+                        startedAt: session.startedAt,
+                        mode: session.mode,
+                        phase: .runningCountdown(targetDate: now.addingTimeInterval(remaining))
+                    )
+                )
                 return []
 
             case let .pausedCountUp(accumulated):
-                state = .active(TimerSession(mode: session.mode, phase: .runningCountUp(startedAt: now, accumulated: accumulated)))
+                state = .active(
+                    TimerSession(
+                        startedAt: session.startedAt,
+                        mode: session.mode,
+                        phase: .runningCountUp(startedAt: now, accumulated: accumulated)
+                    )
+                )
                 return []
 
             case .runningCountdown, .runningCountUp:
@@ -95,9 +119,15 @@ struct TimerStateMachine: Equatable {
 
             switch session.mode {
             case let .countdown(duration):
-                state = .active(TimerSession(mode: session.mode, phase: .runningCountdown(targetDate: now.addingTimeInterval(duration))))
+                state = .active(
+                    TimerSession(
+                        startedAt: now,
+                        mode: session.mode,
+                        phase: .runningCountdown(targetDate: now.addingTimeInterval(duration))
+                    )
+                )
             case .countUp:
-                state = .active(TimerSession(mode: .countUp, phase: .runningCountUp(startedAt: now, accumulated: 0)))
+                state = .active(TimerSession(startedAt: now, mode: .countUp, phase: .runningCountUp(startedAt: now, accumulated: 0)))
             }
 
             return []
