@@ -160,7 +160,7 @@ struct JustAboutTimeTests {
         #expect(appSource.contains("let historyStore = HistoryStore()"))
         #expect(appSource.contains("TimerStore(historyStore: historyStore)"))
         #expect(appSource.contains("Window(\"History\", id: HistoryWindow.id)"))
-        #expect(appSource.contains("HistoryView(historyStore: historyStore)"))
+        #expect(appSource.contains("HistoryView(historyStore: historyStore, timerStore: timerStore)"))
         #expect(appSource.contains("Settings {"))
         #expect(appSource.contains("PreferencesView(preferencesStore: preferencesStore)"))
     }
@@ -231,12 +231,16 @@ struct JustAboutTimeTests {
         #expect(source.contains("Section(\"Countdown Presets\")"))
         #expect(source.contains("KeyboardShortcuts.Recorder(for: name)"))
         #expect(source.contains("Section(\"Notifications\")"))
+        #expect(source.contains("if let settingsURL = URL("))
+        #expect(source.contains("Notifications-Settings.extension\")!)") == false)
     }
 
-    @Test func historyViewIncludesEmptyStateAndTable() throws {
+    @Test func historyViewIncludesErrorStateBannerAndTable() throws {
         let source = try source(at: projectFilePath("JustAboutTime/HistoryView.swift"))
 
         #expect(source.contains("ContentUnavailableView"))
+        #expect(source.contains("timerStore.latestHistoryError"))
+        #expect(source.contains("historyStore.latestLoadError"))
         #expect(source.contains("Table(historyStore.entries)"))
     }
 

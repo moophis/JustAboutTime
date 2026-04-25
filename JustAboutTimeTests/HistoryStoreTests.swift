@@ -60,6 +60,40 @@ struct HistoryStoreTests {
         #expect(result.failure == .unreadableExistingHistory)
     }
 
+    @Test func initTracksUnreadableHistoryAsLoadError() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let fileURL = directoryURL.appendingPathComponent("history.json")
+        try Data("not-json".utf8).write(to: fileURL)
+
+        let store = HistoryStore(fileURL: fileURL)
+
+        #expect(store.entries.isEmpty)
+        #expect(store.latestLoadError == .unreadableExistingHistory)
+    }
+
+    @Test func refreshClearsLoadErrorAfterReadableHistoryAppears() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let fileURL = directoryURL.appendingPathComponent("history.json")
+        try Data("not-json".utf8).write(to: fileURL)
+        let store = HistoryStore(fileURL: fileURL)
+        let encoder = JSONEncoder()
+
+        try encoder.encode([
+            HistoryEntry(
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000010")!,
+                presetDuration: 300,
+                startedAt: Date(timeIntervalSinceReferenceDate: 100),
+                completedAt: Date(timeIntervalSinceReferenceDate: 400)
+            )
+        ]).write(to: fileURL, options: .atomic)
+
+        let result = store.refresh()
+
+        #expect(result.entries?.count == 1)
+        #expect(store.latestLoadError == nil)
+        #expect(store.entries.count == 1)
+    }
+
     @Test func corruptHistoryFileFailsSoft() throws {
         let directoryURL = try makeTemporaryDirectory()
         let fileURL = directoryURL.appendingPathComponent("history.json")

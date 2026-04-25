@@ -14,6 +14,7 @@ final class HistoryStore: ObservableObject {
     private let decoder: JSONDecoder
 
     @Published private(set) var entries: [HistoryEntry]
+    @Published private(set) var latestLoadError: HistoryError?
 
     init(
         fileURL: URL = HistoryStore.defaultFileURL(),
@@ -22,11 +23,15 @@ final class HistoryStore: ObservableObject {
         decoder: JSONDecoder = JSONDecoder()
     ) {
         let initialEntries: [HistoryEntry]
+        let initialLoadError: HistoryError?
 
-        if case let .success(loadedEntries) = Self.readEntriesForLoad(fileURL: fileURL, fileManager: fileManager, decoder: decoder) {
+        switch Self.readEntriesForLoad(fileURL: fileURL, fileManager: fileManager, decoder: decoder) {
+        case let .success(loadedEntries):
             initialEntries = Self.sortNewestFirst(loadedEntries)
-        } else {
+            initialLoadError = nil
+        case let .failure(error):
             initialEntries = []
+            initialLoadError = error
         }
 
         self.fileURL = fileURL
@@ -34,16 +39,31 @@ final class HistoryStore: ObservableObject {
         self.encoder = encoder
         self.decoder = decoder
         _entries = Published(initialValue: initialEntries)
+        _latestLoadError = Published(initialValue: initialLoadError)
         self.encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     }
 
     func loadEntries() -> [HistoryEntry] {
-        guard case let .success(entries) = loadResult() else {
+        guard case let .success(entries) = refresh() else {
             return []
         }
 
-        self.entries = entries
         return entries
+    }
+
+    @discardableResult
+    func refresh() -> Result<[HistoryEntry], HistoryError> {
+        let result = loadResult()
+
+        switch result {
+        case let .success(entries):
+            self.entries = entries
+            latestLoadError = nil
+        case let .failure(error):
+            latestLoadError = error
+        }
+
+        return result
     }
 
     func loadResult() -> Result<[HistoryEntry], HistoryError> {
@@ -84,6 +104,7 @@ final class HistoryStore: ObservableObject {
         }
 
         entries = sortedEntries
+        latestLoadError = nil
 
         return .success(())
     }

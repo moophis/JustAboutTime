@@ -133,7 +133,9 @@ private final class NotificationPermissionModel: ObservableObject {
             }
         case .denied:
             return Action(title: "Open System Settings") {
-                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")!)
+                if let settingsURL = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
+                    NSWorkspace.shared.open(settingsURL)
+                }
             }
         case .authorized, .provisional, .ephemeral:
             return Action(title: "Refresh") { [weak self] in

@@ -21,7 +21,7 @@ struct JustAboutTimeApp: App {
         .menuBarExtraStyle(.menu)
 
         Window("History", id: HistoryWindow.id) {
-            HistoryView(historyStore: historyStore)
+            HistoryView(historyStore: historyStore, timerStore: timerStore)
         }
 
         Settings {
