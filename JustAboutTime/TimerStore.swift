@@ -93,6 +93,12 @@ final class TimerStore: ObservableObject {
 
     func restart() {
         let currentTime = now()
+
+        guard stateMachine.session != nil else {
+            startMostRecentMode(referenceTime: currentTime)
+            return
+        }
+
         send(.restart(now: currentTime), referenceTime: currentTime)
     }
 
