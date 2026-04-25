@@ -1,4 +1,5 @@
 import Foundation
+import KeyboardShortcuts
 import Testing
 
 @testable import JustAboutTime
@@ -11,6 +12,21 @@ struct PreferencesStoreTests {
         #expect(store.presetDurations == AppConfiguration.defaultPresetDurations)
         #expect(storedPresetDurations(in: userDefaults) == AppConfiguration.defaultPresetDurations)
         #expect(store.shortcutNames.map(\.rawValue) == ["startPauseTimer", "restartTimer", "finishTimer"])
+    }
+
+    @Test func shortcutsRoundTripAcrossStoreReloads() {
+        resetShortcuts()
+        defer { resetShortcuts() }
+
+        let firstLaunchStore = PreferencesStore(userDefaults: makeUserDefaults())
+        let shortcut = KeyboardShortcuts.Shortcut(.a, modifiers: [.command, .option])
+
+        firstLaunchStore.setShortcut(shortcut, for: AppConfiguration.startPauseShortcutName)
+
+        let relaunchedStore = PreferencesStore(userDefaults: makeUserDefaults())
+
+        #expect(relaunchedStore.shortcut(for: AppConfiguration.startPauseShortcutName) == shortcut)
+        #expect(KeyboardShortcuts.getShortcut(for: AppConfiguration.startPauseShortcutName) == shortcut)
     }
 
     @Test func editedPresetDurationsPersistAcrossStoreReloads() throws {
@@ -48,14 +64,34 @@ struct PreferencesStoreTests {
         #expect(storedPresetDurations(in: userDefaults) == [60, 120, 180])
     }
 
-    @Test func malformedStoredPresetDurationsFallBackToDefaults() {
+    @Test func malformedStoredPresetDurationsPreserveValidEntries() {
         let userDefaults = makeUserDefaults()
         userDefaults.set([300, -1, 3_000], forKey: "presetDurations")
 
         let store = PreferencesStore(userDefaults: userDefaults)
 
-        #expect(store.presetDurations == AppConfiguration.defaultPresetDurations)
-        #expect(storedPresetDurations(in: userDefaults) == AppConfiguration.defaultPresetDurations)
+        #expect(store.presetDurations == [300, 1_500, 3_000])
+        #expect(storedPresetDurations(in: userDefaults) == [300, 1_500, 3_000])
+    }
+
+    @Test func missingStoredPresetDurationsFillFromDefaults() {
+        let userDefaults = makeUserDefaults()
+        userDefaults.set([600], forKey: "presetDurations")
+
+        let store = PreferencesStore(userDefaults: userDefaults)
+
+        #expect(store.presetDurations == [600, 1_500, 3_000])
+        #expect(storedPresetDurations(in: userDefaults) == [600, 1_500, 3_000])
+    }
+
+    @Test func extraStoredPresetDurationsAreIgnored() {
+        let userDefaults = makeUserDefaults()
+        userDefaults.set([600, 1_200, 1_800, 2_400], forKey: "presetDurations")
+
+        let store = PreferencesStore(userDefaults: userDefaults)
+
+        #expect(store.presetDurations == [600, 1_200, 1_800])
+        #expect(storedPresetDurations(in: userDefaults) == [600, 1_200, 1_800])
     }
 
     private func makeUserDefaults() -> UserDefaults {
@@ -67,5 +103,9 @@ struct PreferencesStoreTests {
 
     private func storedPresetDurations(in userDefaults: UserDefaults) -> [TimeInterval]? {
         userDefaults.array(forKey: "presetDurations") as? [TimeInterval]
+    }
+
+    private func resetShortcuts() {
+        KeyboardShortcuts.reset(AppShortcuts.allNames)
     }
 }

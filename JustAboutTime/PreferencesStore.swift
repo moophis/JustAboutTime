@@ -19,7 +19,7 @@ final class PreferencesStore {
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
         presetDurations = Self.loadPresetDurations(from: userDefaults)
-        shortcutNames = KeyboardShortcuts.Name.allCases
+        shortcutNames = AppShortcuts.allNames
         persistPresetDurations(presetDurations)
     }
 
@@ -27,6 +27,14 @@ final class PreferencesStore {
         let sanitizedDurations = try Self.validatePresetDurations(durations)
         presetDurations = sanitizedDurations
         persistPresetDurations(sanitizedDurations)
+    }
+
+    func shortcut(for name: KeyboardShortcuts.Name) -> KeyboardShortcuts.Shortcut? {
+        KeyboardShortcuts.getShortcut(for: name)
+    }
+
+    func setShortcut(_ shortcut: KeyboardShortcuts.Shortcut?, for name: KeyboardShortcuts.Name) {
+        KeyboardShortcuts.setShortcut(shortcut, for: name)
     }
 
     private func persistPresetDurations(_ durations: [TimeInterval]) {
@@ -38,24 +46,22 @@ final class PreferencesStore {
             return AppConfiguration.defaultPresetDurations
         }
 
-        guard storedValues.count == AppConfiguration.defaultPresetDurations.count else {
-            return AppConfiguration.defaultPresetDurations
-        }
+        var sanitizedDurations = AppConfiguration.defaultPresetDurations
 
-        var sanitizedDurations: [TimeInterval] = []
-        sanitizedDurations.reserveCapacity(storedValues.count)
+        for index in sanitizedDurations.indices {
+            guard index < storedValues.count else {
+                break
+            }
 
-        for storedValue in storedValues {
-            guard let duration = (storedValue as? NSNumber)?.doubleValue else {
-                return AppConfiguration.defaultPresetDurations
+            guard let duration = (storedValues[index] as? NSNumber)?.doubleValue else {
+                continue
             }
 
             guard duration.isFinite, duration >= AppConfiguration.minimumPresetDuration else {
-                return AppConfiguration.defaultPresetDurations
+                continue
             }
 
-            let clampedDuration = min(duration, AppConfiguration.maximumPresetDuration)
-            sanitizedDurations.append(clampedDuration)
+            sanitizedDurations[index] = min(duration, AppConfiguration.maximumPresetDuration)
         }
 
         return sanitizedDurations

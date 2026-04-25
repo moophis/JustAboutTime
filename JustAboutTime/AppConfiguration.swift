@@ -7,7 +7,7 @@ enum AppConfiguration {
     static let defaultPresetDurations: [TimeInterval] = [5 * 60, 25 * 60, 50 * 60]
     static let minimumPresetDuration: TimeInterval = 1
     static let maximumPresetDuration: TimeInterval = 24 * 60 * 60
-    static let startPauseShortcutName = KeyboardShortcuts.Name.startPauseTimer
-    static let restartShortcutName = KeyboardShortcuts.Name.restartTimer
-    static let finishShortcutName = KeyboardShortcuts.Name.finishTimer
+    static let startPauseShortcutName = AppShortcuts.startPauseTimer
+    static let restartShortcutName = AppShortcuts.restartTimer
+    static let finishShortcutName = AppShortcuts.finishTimer
 }

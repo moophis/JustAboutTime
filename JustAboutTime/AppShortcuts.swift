@@ -1,15 +1,13 @@
 import KeyboardShortcuts
 
-extension KeyboardShortcuts.Name {
-    static let startPauseTimer = Self("startPauseTimer")
-    static let restartTimer = Self("restartTimer")
-    static let finishTimer = Self("finishTimer")
-}
+enum AppShortcuts {
+    static let startPauseTimer = KeyboardShortcuts.Name("startPauseTimer")
+    static let restartTimer = KeyboardShortcuts.Name("restartTimer")
+    static let finishTimer = KeyboardShortcuts.Name("finishTimer")
 
-extension KeyboardShortcuts.Name: CaseIterable {
-    public static let allCases: [Self] = [
-        .startPauseTimer,
-        .restartTimer,
-        .finishTimer
+    static let allNames: [KeyboardShortcuts.Name] = [
+        startPauseTimer,
+        restartTimer,
+        finishTimer
     ]
 }
