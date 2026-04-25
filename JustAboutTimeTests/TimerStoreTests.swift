@@ -215,6 +215,27 @@ struct TimerStoreTests {
         #expect(store.latestEvent == .countdownCompleted)
         #expect(store.latestHistoryError == .failedToPersistHistory)
     }
+
+    @MainActor
+    @Test func corruptHistoryFileDoesNotBreakCompletedCountdownFlow() throws {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let directoryURL = try makeTemporaryDirectory()
+        let fileURL = directoryURL.appendingPathComponent("history.json")
+        try Data("not-json".utf8).write(to: fileURL)
+        let historyStore = HistoryStore(fileURL: fileURL)
+        let store = TimerStore(historyStore: historyStore, now: { clock.now })
+
+        store.startCountdown(duration: 1)
+        clock.advance(by: 2)
+        store.pause()
+
+        let loadResult = historyStore.loadResult()
+
+        #expect(store.latestEvent == .countdownCompleted)
+        #expect(store.activeSession == nil)
+        #expect(store.latestHistoryError == .unreadableExistingHistory)
+        #expect(loadResultFailure(loadResult) == .unreadableExistingHistory)
+    }
 }
 
 private final class TestClock: @unchecked Sendable {
@@ -268,4 +289,14 @@ private func makeTemporaryDirectory() throws -> URL {
     let directoryURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
     return directoryURL
+}
+
+private func loadResultFailure(
+    _ result: Result<[HistoryEntry], HistoryStore.HistoryError>
+) -> HistoryStore.HistoryError? {
+    if case let .failure(error) = result {
+        return error
+    }
+
+    return nil
 }

@@ -25,11 +25,15 @@ final class HistoryStore {
     }
 
     func loadEntries() -> [HistoryEntry] {
-        guard case let .success(entries) = readEntriesForLoad() else {
+        guard case let .success(entries) = loadResult() else {
             return []
         }
 
-        return Self.sortNewestFirst(entries)
+        return entries
+    }
+
+    func loadResult() -> Result<[HistoryEntry], HistoryError> {
+        readEntriesForLoad().map(Self.sortNewestFirst)
     }
 
     @discardableResult

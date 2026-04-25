@@ -47,6 +47,18 @@ struct HistoryStoreTests {
         ])
     }
 
+    @Test func loadResultSurfacesUnreadableHistory() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let fileURL = directoryURL.appendingPathComponent("history.json")
+        try Data("not-json".utf8).write(to: fileURL)
+        let store = HistoryStore(fileURL: fileURL)
+
+        let result = store.loadResult()
+
+        #expect(result.entries == nil)
+        #expect(result.failure == .unreadableExistingHistory)
+    }
+
     @Test func corruptHistoryFileFailsSoft() throws {
         let directoryURL = try makeTemporaryDirectory()
         let fileURL = directoryURL.appendingPathComponent("history.json")
@@ -106,6 +118,24 @@ private extension Result where Success == Void {
         }
 
         return false
+    }
+
+    var failure: Failure? {
+        if case let .failure(error) = self {
+            return error
+        }
+
+        return nil
+    }
+}
+
+private extension Result where Success == [HistoryEntry], Failure == HistoryStore.HistoryError {
+    var entries: [HistoryEntry]? {
+        if case let .success(entries) = self {
+            return entries
+        }
+
+        return nil
     }
 
     var failure: Failure? {
