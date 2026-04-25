@@ -14,17 +14,6 @@ struct NotificationManagerTests {
     }
 
     @MainActor
-    @Test func prepareRequestsAuthorizationOnlyWhenUndetermined() async {
-        let center = TestNotificationManagerCenter(initialStatus: .notDetermined)
-        let manager = NotificationManager(client: center.makeClient())
-
-        await manager.prepareForCountdownAlertsIfNeeded()
-
-        #expect(await center.authorizationRequestCount == 1)
-        #expect(manager.authorizationStatus == .authorized)
-    }
-
-    @MainActor
     @Test func authorizationRequestsAreCoalescedAcrossConcurrentCallers() async {
         let center = TestNotificationManagerCenter(initialStatus: .notDetermined, authorizationDelay: .milliseconds(50))
         let manager = NotificationManager(client: center.makeClient())
@@ -41,6 +30,8 @@ struct NotificationManagerTests {
     @Test func notifyCountdownCompletedRequestsAuthorizationWhenFirstNeeded() async {
         let center = TestNotificationManagerCenter(initialStatus: .notDetermined)
         let manager = NotificationManager(client: center.makeClient())
+
+        #expect(await center.authorizationRequestCount == 0)
 
         await manager.notifyCountdownCompleted(duration: 25 * 60)
 

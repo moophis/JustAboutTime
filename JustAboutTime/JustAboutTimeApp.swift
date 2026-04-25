@@ -3,7 +3,7 @@ import SwiftUI
 @main
 struct JustAboutTimeApp: App {
     @StateObject private var historyStore: HistoryStore
-    @StateObject private var notificationManager = NotificationManager()
+    @StateObject private var notificationManager: NotificationManager
     @StateObject private var timerStore: TimerStore
     @StateObject private var preferencesStore = PreferencesStore()
 

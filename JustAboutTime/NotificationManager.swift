@@ -89,7 +89,6 @@ final class NotificationManager: ObservableObject {
     @Published private(set) var latestDeliveryError: DeliveryError?
 
     private let client: Client
-    private var hasLoadedAuthorizationStatus = false
     private var refreshTask: InFlightStatusTask?
     private var authorizationTask: InFlightStatusTask?
 
@@ -132,16 +131,6 @@ final class NotificationManager: ObservableObject {
 
     func refresh() async {
         _ = await currentAuthorizationStatus(forceRefresh: true)
-    }
-
-    func prepareForCountdownAlertsIfNeeded() async {
-        let status = await currentAuthorizationStatus(forceRefresh: !hasLoadedAuthorizationStatus)
-
-        guard status == .notDetermined else {
-            return
-        }
-
-        await requestAuthorization()
     }
 
     func requestAuthorization() async {
@@ -191,7 +180,6 @@ final class NotificationManager: ObservableObject {
         }
 
         authorizationStatus = status
-        hasLoadedAuthorizationStatus = true
         return status
     }
 
@@ -213,7 +201,6 @@ final class NotificationManager: ObservableObject {
         }
 
         authorizationStatus = status
-        hasLoadedAuthorizationStatus = true
         return status
     }
 

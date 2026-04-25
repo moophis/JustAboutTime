@@ -156,7 +156,7 @@ struct JustAboutTimeTests {
         #expect(appSource.contains("MenuBarView(timerStore: timerStore, preferencesStore: preferencesStore)"))
         #expect(appSource.contains("StatusBarLabelView(presentation: timerStore.statusPresentation)"))
         #expect(appSource.contains("@StateObject private var historyStore: HistoryStore"))
-        #expect(appSource.contains("@StateObject private var notificationManager = NotificationManager()"))
+        #expect(appSource.contains("@StateObject private var notificationManager: NotificationManager"))
         #expect(appSource.contains("@StateObject private var preferencesStore = PreferencesStore()"))
         #expect(appSource.contains("let historyStore = HistoryStore()"))
         #expect(appSource.contains("let notificationManager = NotificationManager()"))
