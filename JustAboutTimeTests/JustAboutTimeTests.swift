@@ -5,6 +5,73 @@ import Foundation
 struct JustAboutTimeTests {
     struct TestError: Error {}
 
+    @Test func countdownStartsWithCorrectTarget() {
+        let now = Date(timeIntervalSinceReferenceDate: 1_000)
+        var machine = TimerStateMachine()
+
+        let events = machine.send(.startCountdown(duration: 300, now: now))
+
+        #expect(events.isEmpty)
+        #expect(machine.state == .active(TimerSession(mode: .countdown(duration: 300), phase: .runningCountdown(targetDate: now.addingTimeInterval(300)))))
+    }
+
+    @Test func pauseAndResumePreserveRemainingCountdownTime() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        var machine = TimerStateMachine()
+
+        _ = machine.send(.startCountdown(duration: 120, now: start))
+        _ = machine.send(.pause(now: start.addingTimeInterval(30)))
+
+        #expect(machine.session?.remainingTime(at: start.addingTimeInterval(45)) == 90)
+
+        _ = machine.send(.resume(now: start.addingTimeInterval(50)))
+
+        #expect(machine.session?.remainingTime(at: start.addingTimeInterval(80)) == 60)
+    }
+
+    @Test func restartResetsCountdownToOriginalDuration() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        var machine = TimerStateMachine()
+
+        _ = machine.send(.startCountdown(duration: 120, now: start))
+        _ = machine.send(.pause(now: start.addingTimeInterval(30)))
+        _ = machine.send(.restart(now: start.addingTimeInterval(70)))
+
+        #expect(machine.state == .active(TimerSession(mode: .countdown(duration: 120), phase: .runningCountdown(targetDate: start.addingTimeInterval(190)))))
+    }
+
+    @Test func countUpAdvancesFromZero() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        var machine = TimerStateMachine()
+
+        _ = machine.send(.startCountUp(now: start))
+        _ = machine.send(.tick(now: start.addingTimeInterval(45)))
+
+        #expect(machine.session?.elapsedTime(at: start.addingTimeInterval(45)) == 45)
+    }
+
+    @Test func finishReturnsToIdle() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        var machine = TimerStateMachine()
+
+        _ = machine.send(.startCountUp(now: start))
+        let events = machine.send(.finish)
+
+        #expect(events.isEmpty)
+        #expect(machine.state == .idle)
+    }
+
+    @Test func countdownCompletionEmitsCompletionEvent() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        var machine = TimerStateMachine()
+
+        _ = machine.send(.startCountdown(duration: 5, now: start))
+        let events = machine.send(.tick(now: start.addingTimeInterval(5)))
+
+        #expect(events == [.countdownCompleted])
+        #expect(machine.state == .idle)
+    }
+
     @Test func appConfigurationDefinesExpectedDefaults() {
         #expect(AppConfiguration.appDisplayName == "Just About Time")
         #expect(AppConfiguration.menuBarSystemImage == "timer")

@@ -13,6 +13,9 @@
 		A10000010000000000000004 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = A10000910000000000000001 /* KeyboardShortcuts */; };
 		A10000010000000000000005 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000007 /* AppConfiguration.swift */; };
 		A10000010000000000000006 /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000008 /* AppShortcuts.swift */; };
+		A10000010000000000000007 /* TimerMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000009 /* TimerMode.swift */; };
+		A10000010000000000000008 /* TimerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000000A /* TimerSession.swift */; };
+		A10000010000000000000009 /* TimerStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000000B /* TimerStateMachine.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,6 +37,9 @@
 		A10000110000000000000006 /* JustAboutTimeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JustAboutTimeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000110000000000000007 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
 		A10000110000000000000008 /* AppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShortcuts.swift; sourceTree = "<group>"; };
+		A10000110000000000000009 /* TimerMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerMode.swift; sourceTree = "<group>"; };
+		A1000011000000000000000A /* TimerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerSession.swift; sourceTree = "<group>"; };
+		A1000011000000000000000B /* TimerStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerStateMachine.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,6 +79,9 @@
 				A10000110000000000000008 /* AppShortcuts.swift */,
 				A10000110000000000000001 /* JustAboutTimeApp.swift */,
 				A10000110000000000000002 /* MenuBarView.swift */,
+				A10000110000000000000009 /* TimerMode.swift */,
+				A1000011000000000000000A /* TimerSession.swift */,
+				A1000011000000000000000B /* TimerStateMachine.swift */,
 				A10000110000000000000003 /* Info.plist */,
 			);
 		};
@@ -189,6 +198,9 @@
 				A10000010000000000000006 /* AppShortcuts.swift in Sources */,
 				A10000010000000000000001 /* JustAboutTimeApp.swift in Sources */,
 				A10000010000000000000002 /* MenuBarView.swift in Sources */,
+				A10000010000000000000007 /* TimerMode.swift in Sources */,
+				A10000010000000000000008 /* TimerSession.swift in Sources */,
+				A10000010000000000000009 /* TimerStateMachine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
