@@ -27,6 +27,10 @@ struct PreferencesView: View {
                         KeyboardShortcuts.Recorder(for: name)
                     }
                 }
+
+                Text("Conflicting or invalid shortcuts are rejected automatically.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Notifications") {

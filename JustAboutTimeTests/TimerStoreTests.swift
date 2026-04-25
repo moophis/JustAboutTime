@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import KeyboardShortcuts
 import Testing
 
 @testable import JustAboutTime
@@ -94,6 +95,75 @@ struct TimerStoreTests {
     }
 
     @MainActor
+    @Test func startPauseDoesNothingWhileIdleWithoutRecentMode() {
+        let store = TimerStore(now: { Date(timeIntervalSinceReferenceDate: 1_000) })
+
+        store.toggleStartPause()
+
+        #expect(store.activeSession == nil)
+        #expect(store.statusPresentation.text == "00:00")
+    }
+
+    @MainActor
+    @Test func startPauseRepeatsMostRecentCountdownWhenIdle() throws {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let store = TimerStore(now: { clock.now })
+
+        store.startCountdown(duration: 90)
+        clock.advance(by: 30)
+        store.finish()
+
+        #expect(store.activeSession == nil)
+
+        clock.advance(by: 10)
+        store.toggleStartPause()
+
+        let session = try #require(store.activeSession)
+        #expect(session.mode == .countdown(duration: 90))
+        #expect(session.startedAt == Date(timeIntervalSinceReferenceDate: 1_040))
+        #expect(store.statusPresentation.text == "01:30")
+    }
+
+    @MainActor
+    @Test func startPauseRepeatsMostRecentCountUpWhenIdle() throws {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let store = TimerStore(now: { clock.now })
+
+        store.startCountUp()
+        clock.advance(by: 45)
+        store.finish()
+
+        #expect(store.activeSession == nil)
+
+        clock.advance(by: 10)
+        store.toggleStartPause()
+
+        let session = try #require(store.activeSession)
+        #expect(session.mode == .countUp)
+        #expect(session.startedAt == Date(timeIntervalSinceReferenceDate: 1_055))
+        #expect(store.statusPresentation.text == "00:00")
+    }
+
+    @MainActor
+    @Test func startPauseTogglesActiveSessionState() {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let store = TimerStore(now: { clock.now })
+
+        store.startCountdown(duration: 90)
+        clock.advance(by: 15)
+        store.toggleStartPause()
+
+        #expect(store.activeSession?.phase.isPaused == true)
+        #expect(store.statusPresentation.dotPhase == .hidden)
+
+        clock.advance(by: 5)
+        store.toggleStartPause()
+
+        #expect(store.activeSession?.phase.isRunning == true)
+        #expect(store.statusPresentation.text == "01:15")
+    }
+
+    @MainActor
     @Test func timerStoreSurfacesCountdownCompletionEvents() async throws {
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
         let sleeper = TestSleeper()
@@ -111,6 +181,39 @@ struct TimerStoreTests {
 
         #expect(store.latestEvent == .countdownCompleted)
         #expect(store.activeSession == nil)
+    }
+
+    @MainActor
+    @Test func shortcutManagerRegistersGlobalHandlersAndRoutesActions() {
+        let registry = TestShortcutRegistry()
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let store = TimerStore(now: { clock.now })
+        let manager = ShortcutManager(
+            timerStore: store,
+            client: .init(onKeyUp: { name, handler in
+                registry.register(handler: handler, for: name)
+            })
+        )
+
+        #expect(registry.registeredNames == AppShortcuts.allNames.map(\.rawValue).sorted())
+
+        store.startCountdown(duration: 90)
+        clock.advance(by: 15)
+        registry.press(AppShortcuts.startPauseTimer)
+        #expect(store.activeSession?.phase.isPaused == true)
+
+        registry.press(AppShortcuts.restartTimer)
+        #expect(store.statusPresentation.text == "01:30")
+        #expect(store.activeSession?.phase.isRunning == true)
+
+        registry.press(AppShortcuts.finishTimer)
+        #expect(store.activeSession == nil)
+
+        clock.advance(by: 10)
+        registry.press(AppShortcuts.startPauseTimer)
+        #expect(store.activeSession?.mode == .countdown(duration: 90))
+
+        withExtendedLifetime(manager) {}
     }
 
     @MainActor
@@ -369,6 +472,23 @@ private final class SteppingClock: @unchecked Sendable {
     }
 }
 
+@MainActor
+private final class TestShortcutRegistry {
+    private var handlers: [String: @MainActor () -> Void] = [:]
+
+    var registeredNames: [String] {
+        handlers.keys.sorted()
+    }
+
+    func register(handler: @escaping @MainActor () -> Void, for name: KeyboardShortcuts.Name) {
+        handlers[name.rawValue] = handler
+    }
+
+    func press(_ name: KeyboardShortcuts.Name) {
+        handlers[name.rawValue]?()
+    }
+}
+
 private actor TestSleeper {
     private var continuations: [CheckedContinuation<Void, Never>] = []
 
@@ -402,4 +522,24 @@ private func loadResultFailure(
     }
 
     return nil
+}
+
+private extension TimerSession.Phase {
+    var isPaused: Bool {
+        switch self {
+        case .pausedCountdown, .pausedCountUp:
+            return true
+        case .runningCountdown, .runningCountUp:
+            return false
+        }
+    }
+
+    var isRunning: Bool {
+        switch self {
+        case .runningCountdown, .runningCountUp:
+            return true
+        case .pausedCountdown, .pausedCountUp:
+            return false
+        }
+    }
 }

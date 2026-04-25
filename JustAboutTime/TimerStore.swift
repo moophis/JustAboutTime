@@ -5,6 +5,11 @@ import Foundation
 final class TimerStore: ObservableObject {
     typealias Sleep = @Sendable (Duration) async throws -> Void
 
+    private enum RepeatableStartMode: Equatable {
+        case countdown(duration: TimeInterval)
+        case countUp
+    }
+
     enum Event: Equatable {
         case countdownCompleted
     }
@@ -21,6 +26,7 @@ final class TimerStore: ObservableObject {
     private let now: @Sendable () -> Date
     private let sleep: Sleep
     private let tickInterval: Duration
+    private var repeatableStartMode: RepeatableStartMode?
     private var animationStep = 0
     private var tickTask: Task<Void, Never>?
 
@@ -38,6 +44,7 @@ final class TimerStore: ObservableObject {
         self.now = now
         self.sleep = sleep
         self.tickInterval = tickInterval
+        repeatableStartMode = nil
         activeSession = nil
         latestEvent = nil
         latestHistoryError = nil
@@ -46,12 +53,30 @@ final class TimerStore: ObservableObject {
 
     func startCountdown(duration: TimeInterval) {
         let currentTime = now()
+        repeatableStartMode = .countdown(duration: duration)
         send(.startCountdown(duration: duration, now: currentTime), referenceTime: currentTime)
     }
 
     func startCountUp() {
         let currentTime = now()
+        repeatableStartMode = .countUp
         send(.startCountUp(now: currentTime), referenceTime: currentTime)
+    }
+
+    func toggleStartPause() {
+        let currentTime = now()
+
+        guard let session = stateMachine.session else {
+            startMostRecentMode(referenceTime: currentTime)
+            return
+        }
+
+        switch session.phase {
+        case .runningCountdown, .runningCountUp:
+            send(.pause(now: currentTime), referenceTime: currentTime)
+        case .pausedCountdown, .pausedCountUp:
+            send(.resume(now: currentTime), referenceTime: currentTime)
+        }
     }
 
     func pause() {
@@ -71,6 +96,19 @@ final class TimerStore: ObservableObject {
 
     func finish() {
         send(.finish, referenceTime: now())
+    }
+
+    private func startMostRecentMode(referenceTime: Date) {
+        guard let repeatableStartMode else {
+            return
+        }
+
+        switch repeatableStartMode {
+        case let .countdown(duration):
+            send(.startCountdown(duration: duration, now: referenceTime), referenceTime: referenceTime)
+        case .countUp:
+            send(.startCountUp(now: referenceTime), referenceTime: referenceTime)
+        }
     }
 
     private func send(_ action: TimerStateMachine.Action, referenceTime: Date) {
