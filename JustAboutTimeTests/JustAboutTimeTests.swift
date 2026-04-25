@@ -138,7 +138,13 @@ struct JustAboutTimeTests {
     @Test func menuBarViewAcceptsTimerStore() throws {
         let menuSource = try source(at: projectFilePath("JustAboutTime/MenuBarView.swift"))
 
-        #expect(menuSource.contains("let timerStore: TimerStore"))
+        #expect(menuSource.contains("timerStore: TimerStore"))
+    }
+
+    @Test func menuBarViewObservesTimerStore() throws {
+        let menuSource = try source(at: projectFilePath("JustAboutTime/MenuBarView.swift"))
+
+        #expect(menuSource.contains("@ObservedObject var timerStore: TimerStore"))
     }
 
     @Test func menuBarViewKeepsQuitPath() throws {

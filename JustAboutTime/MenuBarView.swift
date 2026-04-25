@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 struct MenuBarView: View {
-    let timerStore: TimerStore
+    @ObservedObject var timerStore: TimerStore
 
     var body: some View {
         Button("Quit") {
