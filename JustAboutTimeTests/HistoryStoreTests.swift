@@ -3,6 +3,7 @@ import Testing
 
 @testable import JustAboutTime
 
+@MainActor
 struct HistoryStoreTests {
     @Test func historyFileCreatesOnFirstWrite() throws {
         let directoryURL = try makeTemporaryDirectory()

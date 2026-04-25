@@ -2,8 +2,15 @@ import SwiftUI
 
 @main
 struct JustAboutTimeApp: App {
-    @StateObject private var timerStore = TimerStore()
+    @StateObject private var historyStore: HistoryStore
+    @StateObject private var timerStore: TimerStore
     @StateObject private var preferencesStore = PreferencesStore()
+
+    init() {
+        let historyStore = HistoryStore()
+        _historyStore = StateObject(wrappedValue: historyStore)
+        _timerStore = StateObject(wrappedValue: TimerStore(historyStore: historyStore))
+    }
 
     var body: some Scene {
         MenuBarExtra {
@@ -14,19 +21,11 @@ struct JustAboutTimeApp: App {
         .menuBarExtraStyle(.menu)
 
         Window("History", id: HistoryWindow.id) {
-            PlaceholderWindowView(
-                title: "History",
-                message: "History view arrives in Task 7. This window exists so the menu entry point is already wired."
-            )
-            .frame(minWidth: 320, minHeight: 180)
+            HistoryView(historyStore: historyStore)
         }
 
         Settings {
-            PlaceholderWindowView(
-                title: "Preferences",
-                message: "Preferences UI arrives in Task 7. This window exists so the menu entry point is already wired."
-            )
-            .frame(minWidth: 360, minHeight: 220)
+            PreferencesView(preferencesStore: preferencesStore)
         }
     }
 }
@@ -53,23 +52,5 @@ private struct StatusBarLabelView: View {
         Circle()
             .frame(width: 6, height: 6)
             .opacity(isVisible ? 1 : 0)
-    }
-}
-
-private struct PlaceholderWindowView: View {
-    let title: String
-    let message: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.title3.weight(.semibold))
-
-            Text(message)
-                .foregroundStyle(.secondary)
-
-            Spacer()
-        }
-        .padding(20)
     }
 }

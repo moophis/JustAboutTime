@@ -155,9 +155,14 @@ struct JustAboutTimeTests {
         #expect(appSource.contains("WindowGroup") == false)
         #expect(appSource.contains("MenuBarView(timerStore: timerStore, preferencesStore: preferencesStore)"))
         #expect(appSource.contains("StatusBarLabelView(presentation: timerStore.statusPresentation)"))
+        #expect(appSource.contains("@StateObject private var historyStore: HistoryStore"))
         #expect(appSource.contains("@StateObject private var preferencesStore = PreferencesStore()"))
+        #expect(appSource.contains("let historyStore = HistoryStore()"))
+        #expect(appSource.contains("TimerStore(historyStore: historyStore)"))
         #expect(appSource.contains("Window(\"History\", id: HistoryWindow.id)"))
+        #expect(appSource.contains("HistoryView(historyStore: historyStore)"))
         #expect(appSource.contains("Settings {"))
+        #expect(appSource.contains("PreferencesView(preferencesStore: preferencesStore)"))
     }
 
     @Test func menuBarViewAcceptsTimerStore() throws {
@@ -218,6 +223,21 @@ struct JustAboutTimeTests {
 
         #expect(projectSource.contains("https://github.com/sindresorhus/KeyboardShortcuts.git"))
         #expect(projectSource.contains("ASSETCATALOG_COMPILER_APPICON_NAME") == false)
+    }
+
+    @Test func preferencesViewIncludesPresetShortcutAndNotificationSections() throws {
+        let source = try source(at: projectFilePath("JustAboutTime/PreferencesView.swift"))
+
+        #expect(source.contains("Section(\"Countdown Presets\")"))
+        #expect(source.contains("KeyboardShortcuts.Recorder(for: name)"))
+        #expect(source.contains("Section(\"Notifications\")"))
+    }
+
+    @Test func historyViewIncludesEmptyStateAndTable() throws {
+        let source = try source(at: projectFilePath("JustAboutTime/HistoryView.swift"))
+
+        #expect(source.contains("ContentUnavailableView"))
+        #expect(source.contains("Table(historyStore.entries)"))
     }
 
     private func projectFilePath(_ relativePath: String) -> URL {

@@ -1,6 +1,8 @@
+import Combine
 import Foundation
 
-final class HistoryStore {
+@MainActor
+final class HistoryStore: ObservableObject {
     enum HistoryError: Error, Equatable {
         case unreadableExistingHistory
         case failedToPersistHistory
@@ -11,16 +13,27 @@ final class HistoryStore {
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
+    @Published private(set) var entries: [HistoryEntry]
+
     init(
         fileURL: URL = HistoryStore.defaultFileURL(),
         fileManager: FileManager = .default,
         encoder: JSONEncoder = JSONEncoder(),
         decoder: JSONDecoder = JSONDecoder()
     ) {
+        let initialEntries: [HistoryEntry]
+
+        if case let .success(loadedEntries) = Self.readEntriesForLoad(fileURL: fileURL, fileManager: fileManager, decoder: decoder) {
+            initialEntries = Self.sortNewestFirst(loadedEntries)
+        } else {
+            initialEntries = []
+        }
+
         self.fileURL = fileURL
         self.fileManager = fileManager
         self.encoder = encoder
         self.decoder = decoder
+        _entries = Published(initialValue: initialEntries)
         self.encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     }
 
@@ -29,11 +42,12 @@ final class HistoryStore {
             return []
         }
 
+        self.entries = entries
         return entries
     }
 
     func loadResult() -> Result<[HistoryEntry], HistoryError> {
-        readEntriesForLoad().map(Self.sortNewestFirst)
+        Self.readEntriesForLoad(fileURL: fileURL, fileManager: fileManager, decoder: decoder).map(Self.sortNewestFirst)
     }
 
     @discardableResult
@@ -43,16 +57,16 @@ final class HistoryStore {
         startedAt: Date,
         completedAt: Date
     ) -> Result<Void, HistoryError> {
-        let entries: [HistoryEntry]
+        let existingEntries: [HistoryEntry]
 
         switch readEntriesForWrite() {
-        case let .success(existingEntries):
-            entries = existingEntries
+        case let .success(loadedEntries):
+            existingEntries = loadedEntries
         case let .failure(error):
             return .failure(error)
         }
 
-        var updatedEntries = entries
+        var updatedEntries = existingEntries
         updatedEntries.insert(
             HistoryEntry(
                 id: id,
@@ -63,9 +77,13 @@ final class HistoryStore {
             at: 0
         )
 
-        guard persist(Self.sortNewestFirst(updatedEntries)) else {
+        let sortedEntries = Self.sortNewestFirst(updatedEntries)
+
+        guard persist(sortedEntries) else {
             return .failure(.failedToPersistHistory)
         }
+
+        entries = sortedEntries
 
         return .success(())
     }
@@ -77,7 +95,11 @@ final class HistoryStore {
             .appendingPathComponent("countdown-history.json", isDirectory: false)
     }
 
-    private func readEntriesForLoad() -> Result<[HistoryEntry], HistoryError> {
+    private static func readEntriesForLoad(
+        fileURL: URL,
+        fileManager: FileManager,
+        decoder: JSONDecoder
+    ) -> Result<[HistoryEntry], HistoryError> {
         guard fileManager.fileExists(atPath: fileURL.path) else {
             return .success([])
         }
@@ -94,7 +116,7 @@ final class HistoryStore {
     }
 
     private func readEntriesForWrite() -> Result<[HistoryEntry], HistoryError> {
-        readEntriesForLoad()
+        Self.readEntriesForLoad(fileURL: fileURL, fileManager: fileManager, decoder: decoder)
     }
 
     private func persist(_ entries: [HistoryEntry]) -> Bool {
