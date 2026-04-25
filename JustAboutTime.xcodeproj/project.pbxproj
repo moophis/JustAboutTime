@@ -1,0 +1,390 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000010000000000000001 /* JustAboutTimeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000001 /* JustAboutTimeApp.swift */; };
+		A10000010000000000000002 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000002 /* MenuBarView.swift */; };
+		A10000010000000000000003 /* JustAboutTimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000004 /* JustAboutTimeTests.swift */; };
+		A10000010000000000000004 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = A10000910000000000000001 /* KeyboardShortcuts */; };
+		A10000010000000000000005 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000007 /* AppConfiguration.swift */; };
+		A10000010000000000000006 /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000008 /* AppShortcuts.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A10000310000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10000410000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10000810000000000000001;
+			remoteInfo = JustAboutTime;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		A10000110000000000000001 /* JustAboutTimeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustAboutTimeApp.swift; sourceTree = "<group>"; };
+		A10000110000000000000002 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
+		A10000110000000000000003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A10000110000000000000004 /* JustAboutTimeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustAboutTimeTests.swift; sourceTree = "<group>"; };
+		A10000110000000000000005 /* JustAboutTime.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JustAboutTime.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000110000000000000006 /* JustAboutTimeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JustAboutTimeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000110000000000000007 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
+		A10000110000000000000008 /* AppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShortcuts.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10000210000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000010000000000000004 /* KeyboardShortcuts in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000210000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A10000510000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A10000510000000000000002 /* JustAboutTime */,
+				A10000510000000000000003 /* JustAboutTimeTests */,
+				A10000510000000000000004 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A10000510000000000000002 /* JustAboutTime */ = {
+			isa = PBXGroup;
+			path = JustAboutTime;
+			sourceTree = "<group>";
+			children = (
+				A10000110000000000000007 /* AppConfiguration.swift */,
+				A10000110000000000000008 /* AppShortcuts.swift */,
+				A10000110000000000000001 /* JustAboutTimeApp.swift */,
+				A10000110000000000000002 /* MenuBarView.swift */,
+				A10000110000000000000003 /* Info.plist */,
+			);
+		};
+		A10000510000000000000003 /* JustAboutTimeTests */ = {
+			isa = PBXGroup;
+			path = JustAboutTimeTests;
+			sourceTree = "<group>";
+			children = (
+				A10000110000000000000004 /* JustAboutTimeTests.swift */,
+			);
+		};
+		A10000510000000000000004 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10000110000000000000005 /* JustAboutTime.app */,
+				A10000110000000000000006 /* JustAboutTimeTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A10000810000000000000001 /* JustAboutTime */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000610000000000000001 /* Build configuration list for PBXNativeTarget \"JustAboutTime\" */;
+			buildPhases = (
+				A10000710000000000000001 /* Sources */,
+				A10000210000000000000001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+			);
+			name = JustAboutTime;
+			packageProductDependencies = (
+				A10000910000000000000001 /* KeyboardShortcuts */,
+			);
+			productName = JustAboutTime;
+			productReference = A10000110000000000000005 /* JustAboutTime.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A10000810000000000000002 /* JustAboutTimeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000610000000000000002 /* Build configuration list for PBXNativeTarget \"JustAboutTimeTests\" */;
+			buildPhases = (
+				A10000710000000000000002 /* Sources */,
+				A10000210000000000000002 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10000A10000000000000001 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+			);
+			name = JustAboutTimeTests;
+			packageProductDependencies = (
+			);
+			productName = JustAboutTimeTests;
+			productReference = A10000110000000000000006 /* JustAboutTimeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A10000410000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					A10000810000000000000001 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					A10000810000000000000002 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = A10000810000000000000001;
+					};
+				};
+			};
+			buildConfigurationList = A10000610000000000000003 /* Build configuration list for PBXProject \"JustAboutTime\" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A10000510000000000000001;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A10000B10000000000000001 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A10000510000000000000004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A10000810000000000000001 /* JustAboutTime */,
+				A10000810000000000000002 /* JustAboutTimeTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A10000710000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000010000000000000005 /* AppConfiguration.swift in Sources */,
+				A10000010000000000000006 /* AppShortcuts.swift in Sources */,
+				A10000010000000000000001 /* JustAboutTimeApp.swift in Sources */,
+				A10000010000000000000002 /* MenuBarView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000710000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000010000000000000003 /* JustAboutTimeTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A10000A10000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A10000810000000000000001 /* JustAboutTime */;
+			targetProxy = A10000310000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A10000C10000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		A10000C10000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		A10000C10000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = JustAboutTime/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.liqiangw.JustAboutTime;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		A10000C10000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = JustAboutTime/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.liqiangw.JustAboutTime;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		A10000C10000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.liqiangw.JustAboutTimeTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JustAboutTime.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/JustAboutTime";
+			};
+			name = Debug;
+		};
+		A10000C10000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.liqiangw.JustAboutTimeTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JustAboutTime.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/JustAboutTime";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A10000610000000000000001 /* Build configuration list for PBXNativeTarget "JustAboutTime" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000C10000000000000003 /* Debug */,
+				A10000C10000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000610000000000000002 /* Build configuration list for PBXNativeTarget "JustAboutTimeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000C10000000000000005 /* Debug */,
+				A10000C10000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000610000000000000003 /* Build configuration list for PBXProject "JustAboutTime" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000C10000000000000001 /* Debug */,
+				A10000C10000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A10000B10000000000000001 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.3.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A10000910000000000000001 /* KeyboardShortcuts */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10000B10000000000000001 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
+			productName = KeyboardShortcuts;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A10000410000000000000001 /* Project object */;
+}
