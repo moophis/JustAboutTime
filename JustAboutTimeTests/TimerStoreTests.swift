@@ -160,6 +160,60 @@ struct TimerStoreTests {
         #expect(entry.presetDuration == 90)
         #expect(entry.startedAt == Date(timeIntervalSinceReferenceDate: 1_000))
         #expect(entry.completedAt == Date(timeIntervalSinceReferenceDate: 1_090))
+        #expect(store.latestHistoryError == nil)
+    }
+
+    @MainActor
+    @Test func overduePausePersistsCompletedCountdown() throws {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let directoryURL = try makeTemporaryDirectory()
+        let historyStore = HistoryStore(fileURL: directoryURL.appendingPathComponent("history.json"))
+        let store = TimerStore(historyStore: historyStore, now: { clock.now })
+
+        store.startCountdown(duration: 90)
+        clock.advance(by: 95)
+        store.pause()
+
+        let entry = try #require(historyStore.loadEntries().first)
+
+        #expect(store.latestEvent == .countdownCompleted)
+        #expect(entry.presetDuration == 90)
+        #expect(entry.startedAt == Date(timeIntervalSinceReferenceDate: 1_000))
+        #expect(entry.completedAt == Date(timeIntervalSinceReferenceDate: 1_095))
+    }
+
+    @MainActor
+    @Test func finishAndRestartDoNotPersistCountdownHistory() throws {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let directoryURL = try makeTemporaryDirectory()
+        let historyStore = HistoryStore(fileURL: directoryURL.appendingPathComponent("history.json"))
+        let store = TimerStore(historyStore: historyStore, now: { clock.now })
+
+        store.startCountdown(duration: 90)
+        clock.advance(by: 30)
+        store.restart()
+        #expect(historyStore.loadEntries().isEmpty)
+
+        clock.advance(by: 10)
+        store.finish()
+        #expect(historyStore.loadEntries().isEmpty)
+    }
+
+    @MainActor
+    @Test func timerStoreSurfacesHistoryPersistenceFailures() throws {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let directoryURL = try makeTemporaryDirectory()
+        let blockingFileURL = directoryURL.appendingPathComponent("blocked")
+        try Data().write(to: blockingFileURL)
+        let historyStore = HistoryStore(fileURL: blockingFileURL.appendingPathComponent("history.json"))
+        let store = TimerStore(historyStore: historyStore, now: { clock.now })
+
+        store.startCountdown(duration: 1)
+        clock.advance(by: 2)
+        store.pause()
+
+        #expect(store.latestEvent == .countdownCompleted)
+        #expect(store.latestHistoryError == .failedToPersistHistory)
     }
 }
 

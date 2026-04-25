@@ -12,6 +12,7 @@ final class TimerStore: ObservableObject {
     @Published private(set) var activeSession: TimerSession?
     @Published private(set) var statusPresentation: TimerStatusPresentation
     @Published private(set) var latestEvent: Event?
+    @Published private(set) var latestHistoryError: HistoryStore.HistoryError?
 
     private var stateMachine = TimerStateMachine()
     private let presenter: StatusBarPresenter
@@ -36,6 +37,7 @@ final class TimerStore: ObservableObject {
         self.tickInterval = tickInterval
         activeSession = nil
         latestEvent = nil
+        latestHistoryError = nil
         statusPresentation = presenter.presentation(for: .idle, animationStep: 0)
     }
 
@@ -86,11 +88,18 @@ final class TimerStore: ObservableObject {
             return
         }
 
-        historyStore.recordCompletedCountdown(
+        let result = historyStore.recordCompletedCountdown(
             presetDuration: presetDuration,
             startedAt: session.startedAt,
             completedAt: completedAt
         )
+
+        switch result {
+        case .success:
+            latestHistoryError = nil
+        case let .failure(error):
+            latestHistoryError = error
+        }
     }
 
     private func synchronizePresentation(referenceTime: Date, events: [TimerStateMachine.Event] = []) {

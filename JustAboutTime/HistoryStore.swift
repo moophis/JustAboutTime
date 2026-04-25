@@ -1,6 +1,11 @@
 import Foundation
 
 final class HistoryStore {
+    enum HistoryError: Error, Equatable {
+        case unreadableExistingHistory
+        case failedToPersistHistory
+    }
+
     private let fileURL: URL
     private let fileManager: FileManager
     private let encoder: JSONEncoder
@@ -20,24 +25,31 @@ final class HistoryStore {
     }
 
     func loadEntries() -> [HistoryEntry] {
-        guard fileManager.fileExists(atPath: fileURL.path) else {
-            return []
-        }
-
-        guard let data = try? Data(contentsOf: fileURL) else {
-            return []
-        }
-
-        guard let entries = try? decoder.decode([HistoryEntry].self, from: data) else {
+        guard case let .success(entries) = readEntriesForLoad() else {
             return []
         }
 
         return Self.sortNewestFirst(entries)
     }
 
-    func recordCompletedCountdown(id: UUID = UUID(), presetDuration: TimeInterval, startedAt: Date, completedAt: Date) {
-        var entries = loadEntries()
-        entries.insert(
+    @discardableResult
+    func recordCompletedCountdown(
+        id: UUID = UUID(),
+        presetDuration: TimeInterval,
+        startedAt: Date,
+        completedAt: Date
+    ) -> Result<Void, HistoryError> {
+        let entries: [HistoryEntry]
+
+        switch readEntriesForWrite() {
+        case let .success(existingEntries):
+            entries = existingEntries
+        case let .failure(error):
+            return .failure(error)
+        }
+
+        var updatedEntries = entries
+        updatedEntries.insert(
             HistoryEntry(
                 id: id,
                 presetDuration: presetDuration,
@@ -47,7 +59,11 @@ final class HistoryStore {
             at: 0
         )
 
-        persist(Self.sortNewestFirst(entries))
+        guard persist(Self.sortNewestFirst(updatedEntries)) else {
+            return .failure(.failedToPersistHistory)
+        }
+
+        return .success(())
     }
 
     static func defaultFileURL(fileManager: FileManager = .default) -> URL {
@@ -57,15 +73,36 @@ final class HistoryStore {
             .appendingPathComponent("countdown-history.json", isDirectory: false)
     }
 
-    private func persist(_ entries: [HistoryEntry]) {
+    private func readEntriesForLoad() -> Result<[HistoryEntry], HistoryError> {
+        guard fileManager.fileExists(atPath: fileURL.path) else {
+            return .success([])
+        }
+
+        guard let data = try? Data(contentsOf: fileURL) else {
+            return .failure(.unreadableExistingHistory)
+        }
+
+        guard let entries = try? decoder.decode([HistoryEntry].self, from: data) else {
+            return .failure(.unreadableExistingHistory)
+        }
+
+        return .success(entries)
+    }
+
+    private func readEntriesForWrite() -> Result<[HistoryEntry], HistoryError> {
+        readEntriesForLoad()
+    }
+
+    private func persist(_ entries: [HistoryEntry]) -> Bool {
         let directoryURL = fileURL.deletingLastPathComponent()
 
         do {
             try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
             let data = try encoder.encode(entries)
             try data.write(to: fileURL, options: .atomic)
+            return true
         } catch {
-            return
+            return false
         }
     }
 
