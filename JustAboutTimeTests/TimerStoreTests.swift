@@ -96,7 +96,11 @@ struct TimerStoreTests {
 
     @MainActor
     @Test func startPauseDoesNothingWhileIdleWithoutRecentMode() {
-        let store = TimerStore(now: { Date(timeIntervalSinceReferenceDate: 1_000) })
+        let preferencesStore = PreferencesStore(userDefaults: makeUserDefaults())
+        let store = TimerStore(
+            preferencesStore: preferencesStore,
+            now: { Date(timeIntervalSinceReferenceDate: 1_000) }
+        )
 
         store.toggleStartPause()
 
@@ -676,6 +680,13 @@ private func makeTemporaryDirectory() throws -> URL {
     let directoryURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
     return directoryURL
+}
+
+private func makeUserDefaults() -> UserDefaults {
+    let suiteName = "TimerStoreTests.\(UUID().uuidString)"
+    let userDefaults = UserDefaults(suiteName: suiteName)!
+    userDefaults.removePersistentDomain(forName: suiteName)
+    return userDefaults
 }
 
 private func loadResultFailure(

@@ -6,6 +6,7 @@ struct MenuBarView: View {
     @ObservedObject var preferencesStore: PreferencesStore
 
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         if timerStore.activeSession != nil {
@@ -30,9 +31,7 @@ struct MenuBarView: View {
 
         Divider()
         historyButton
-        SettingsLink {
-            Text("Preferences…")
-        }
+        preferencesButton
 
         Divider()
         quitButton
@@ -56,9 +55,7 @@ struct MenuBarView: View {
 
         Divider()
         historyButton
-        SettingsLink {
-            Text("Preferences…")
-        }
+        preferencesButton
 
         Divider()
         quitButton
@@ -98,8 +95,19 @@ struct MenuBarView: View {
 
     private var historyButton: some View {
         Button("Open History…") {
+            activateApp()
             openWindow(id: HistoryWindow.id)
+            activateAppOnNextRunLoop()
         }
+    }
+
+    private var preferencesButton: some View {
+        Button("Preferences…") {
+            activateApp()
+            openSettings()
+            activateAppOnNextRunLoop()
+        }
+        .keyboardShortcut(",")
     }
 
     private var quitButton: some View {
@@ -123,6 +131,16 @@ struct MenuBarView: View {
         }
 
         return "\(minutes)m"
+    }
+
+    private func activateApp() {
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func activateAppOnNextRunLoop() {
+        Task { @MainActor in
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
 }
 

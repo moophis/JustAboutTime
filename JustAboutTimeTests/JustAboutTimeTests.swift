@@ -191,7 +191,7 @@ struct JustAboutTimeTests {
         #expect(appSource.contains("@StateObject private var preferencesStore = PreferencesStore()"))
         #expect(appSource.contains("let historyStore = HistoryStore()"))
         #expect(appSource.contains("let notificationManager = NotificationManager()"))
-        #expect(appSource.contains("let timerStore = TimerStore(historyStore: historyStore, notificationManager: notificationManager)"))
+        #expect(appSource.contains("let timerStore = TimerStore(historyStore: historyStore, notificationManager: notificationManager, preferencesStore: preferencesStore)"))
         #expect(appSource.contains("ShortcutManager(timerStore: timerStore)"))
         #expect(appSource.contains("Window(\"History\", id: HistoryWindow.id)"))
         #expect(appSource.contains("HistoryView(historyStore: historyStore, timerStore: timerStore)"))
@@ -231,17 +231,19 @@ struct JustAboutTimeTests {
         #expect(menuSource.contains("preferencesStore.presetDurations.enumerated()"))
         #expect(menuSource.contains("Button(\"Count Up\")"))
         #expect(menuSource.contains("Button(\"Open History…\")"))
-        #expect(menuSource.contains("SettingsLink"))
+        #expect(menuSource.contains("Button(\"Preferences…\")"))
+        #expect(menuSource.contains("@Environment(\\.openSettings) private var openSettings"))
+        #expect(menuSource.contains("openSettings()"))
     }
 
     @Test func activeMenuIncludesTimerControlsAndSummary() throws {
         let menuSource = try source(at: projectFilePath("JustAboutTime/MenuBarView.swift"))
 
-        #expect(menuSource.contains("Button(isRunning(session) ? \"Pause\" : \"Resume\")"))
+        #expect(menuSource.contains("Button(isRunning ? \"Pause\" : \"Resume\")"))
         #expect(menuSource.contains("Button(\"Restart\")"))
         #expect(menuSource.contains("Button(\"Finish\")"))
-        #expect(menuSource.contains("Text(summaryTitle(for: session))"))
-        #expect(menuSource.contains("Text(summarySubtitle(for: session))"))
+        #expect(menuSource.contains("timerInfo"))
+        #expect(menuSource.contains("StableTimerStatusView(timerStore: timerStore)"))
     }
 
     @Test func statusBarLabelKeepsFixedDotSlots() throws {
