@@ -66,6 +66,39 @@ struct TimerStoreTests {
     }
 
     @MainActor
+    @Test func countdownStartUsesSameTimestampForInitialPresentation() {
+        let clock = SteppingClock(times: [
+            Date(timeIntervalSinceReferenceDate: 1_000),
+            Date(timeIntervalSinceReferenceDate: 1_000.9)
+        ])
+        let store = TimerStore(now: { clock.now() })
+
+        store.startCountdown(duration: 60)
+
+        #expect(store.statusPresentation.text == "01:00")
+    }
+
+    @MainActor
+    @Test func timerStoreSurfacesCountdownCompletionEvents() async throws {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let sleeper = TestSleeper()
+        let store = TimerStore(now: { clock.now }, sleep: sleeper.sleep(for:))
+
+        #expect(store.latestEvent == nil)
+
+        store.startCountdown(duration: 1)
+        clock.advance(by: 1)
+        await sleeper.resumeOnce()
+
+        while store.latestEvent == nil, store.activeSession != nil {
+            await Task.yield()
+        }
+
+        #expect(store.latestEvent == .countdownCompleted)
+        #expect(store.activeSession == nil)
+    }
+
+    @MainActor
     @Test func timerStorePublishesTickUpdatesFromMainThread() async throws {
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
         let sleeper = TestSleeper()
@@ -110,6 +143,22 @@ private final class TestClock: @unchecked Sendable {
 
     func advance(by interval: TimeInterval) {
         now = now.addingTimeInterval(interval)
+    }
+}
+
+private final class SteppingClock: @unchecked Sendable {
+    private var times: [Date]
+
+    init(times: [Date]) {
+        self.times = times
+    }
+
+    func now() -> Date {
+        guard times.count > 1 else {
+            return times[0]
+        }
+
+        return times.removeFirst()
     }
 }
 

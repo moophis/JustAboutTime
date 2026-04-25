@@ -5,8 +5,13 @@ import Foundation
 final class TimerStore: ObservableObject {
     typealias Sleep = @Sendable (Duration) async throws -> Void
 
+    enum Event: Equatable {
+        case countdownCompleted
+    }
+
     @Published private(set) var activeSession: TimerSession?
-    @Published private(set) var statusPresentation: StatusBarPresenter.Presentation
+    @Published private(set) var statusPresentation: TimerStatusPresentation
+    @Published private(set) var latestEvent: Event?
 
     private var stateMachine = TimerStateMachine()
     private let presenter: StatusBarPresenter
@@ -27,39 +32,45 @@ final class TimerStore: ObservableObject {
         self.sleep = sleep
         self.tickInterval = tickInterval
         activeSession = nil
+        latestEvent = nil
         statusPresentation = presenter.presentation(for: .idle, animationStep: 0)
     }
 
     func startCountdown(duration: TimeInterval) {
-        send(.startCountdown(duration: duration, now: now()))
+        let currentTime = now()
+        send(.startCountdown(duration: duration, now: currentTime), referenceTime: currentTime)
     }
 
     func startCountUp() {
-        send(.startCountUp(now: now()))
+        let currentTime = now()
+        send(.startCountUp(now: currentTime), referenceTime: currentTime)
     }
 
     func pause() {
-        send(.pause(now: now()))
+        let currentTime = now()
+        send(.pause(now: currentTime), referenceTime: currentTime)
     }
 
     func resume() {
-        send(.resume(now: now()))
+        let currentTime = now()
+        send(.resume(now: currentTime), referenceTime: currentTime)
     }
 
     func restart() {
-        send(.restart(now: now()))
+        let currentTime = now()
+        send(.restart(now: currentTime), referenceTime: currentTime)
     }
 
     func finish() {
-        send(.finish)
+        send(.finish, referenceTime: now())
     }
 
-    private func send(_ action: TimerStateMachine.Action) {
-        _ = stateMachine.send(action)
-        synchronizePresentation()
+    private func send(_ action: TimerStateMachine.Action, referenceTime: Date) {
+        let events = stateMachine.send(action)
+        synchronizePresentation(referenceTime: referenceTime, events: events)
     }
 
-    private func synchronizePresentation() {
+    private func synchronizePresentation(referenceTime: Date, events: [TimerStateMachine.Event] = []) {
         let session = stateMachine.session
 
         if session?.isRunning != true {
@@ -67,11 +78,12 @@ final class TimerStore: ObservableObject {
         }
 
         activeSession = session
-        statusPresentation = presenter.presentation(for: snapshot(for: session), animationStep: animationStep)
+        latestEvent = events.last.map(Event.init)
+        statusPresentation = presenter.presentation(for: snapshot(for: session, referenceTime: referenceTime), animationStep: animationStep)
         updateTickTask(for: session)
     }
 
-    private func snapshot(for session: TimerSession?) -> StatusBarPresenter.Snapshot {
+    private func snapshot(for session: TimerSession?, referenceTime: Date) -> TimerStatusSnapshot {
         guard let session else {
             return .idle
         }
@@ -79,12 +91,12 @@ final class TimerStore: ObservableObject {
         switch session.phase {
         case .runningCountdown, .pausedCountdown:
             return .countdown(
-                remaining: session.remainingTime(at: now()) ?? 0,
+                remaining: session.remainingTime(at: referenceTime) ?? 0,
                 isRunning: session.isRunning
             )
         case .runningCountUp, .pausedCountUp:
             return .countUp(
-                elapsed: session.elapsedTime(at: now()),
+                elapsed: session.elapsedTime(at: referenceTime),
                 isRunning: session.isRunning
             )
         }
@@ -120,12 +132,22 @@ final class TimerStore: ObservableObject {
                 break
             }
 
+            let currentTime = now()
             animationStep += 1
-            _ = stateMachine.send(.tick(now: now()))
-            synchronizePresentation()
+            let events = stateMachine.send(.tick(now: currentTime))
+            synchronizePresentation(referenceTime: currentTime, events: events)
         }
 
         tickTask = nil
+    }
+}
+
+private extension TimerStore.Event {
+    init(_ event: TimerStateMachine.Event) {
+        switch event {
+        case .countdownCompleted:
+            self = .countdownCompleted
+        }
     }
 }
 

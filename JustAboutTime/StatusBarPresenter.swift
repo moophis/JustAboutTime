@@ -1,31 +1,31 @@
 import Foundation
 
+enum TimerStatusSnapshot: Equatable {
+    case idle
+    case countdown(remaining: TimeInterval, isRunning: Bool)
+    case countUp(elapsed: TimeInterval, isRunning: Bool)
+}
+
+struct TimerStatusPresentation: Equatable {
+    enum DotPhase: Equatable {
+        case hidden
+        case leading
+        case trailing
+    }
+
+    let text: String
+    let dotPhase: DotPhase
+}
+
 struct StatusBarPresenter {
-    enum Snapshot: Equatable {
-        case idle
-        case countdown(remaining: TimeInterval, isRunning: Bool)
-        case countUp(elapsed: TimeInterval, isRunning: Bool)
-    }
-
-    struct Presentation: Equatable {
-        enum DotPhase: Equatable {
-            case hidden
-            case leading
-            case trailing
-        }
-
-        let text: String
-        let dotPhase: DotPhase
-    }
-
-    func presentation(for snapshot: Snapshot, animationStep: Int) -> Presentation {
+    func presentation(for snapshot: TimerStatusSnapshot, animationStep: Int) -> TimerStatusPresentation {
         switch snapshot {
         case .idle:
-            return Presentation(text: format(0), dotPhase: .hidden)
+            return TimerStatusPresentation(text: format(0), dotPhase: .hidden)
         case let .countdown(remaining, isRunning):
-            return Presentation(text: format(remaining), dotPhase: dotPhase(isRunning: isRunning, animationStep: animationStep))
+            return TimerStatusPresentation(text: format(remaining), dotPhase: dotPhase(isRunning: isRunning, animationStep: animationStep))
         case let .countUp(elapsed, isRunning):
-            return Presentation(text: format(elapsed), dotPhase: dotPhase(isRunning: isRunning, animationStep: animationStep))
+            return TimerStatusPresentation(text: format(elapsed), dotPhase: dotPhase(isRunning: isRunning, animationStep: animationStep))
         }
     }
 
@@ -37,7 +37,7 @@ struct StatusBarPresenter {
         return String(format: "%02d:%02d", minutes, seconds)
     }
 
-    private func dotPhase(isRunning: Bool, animationStep: Int) -> Presentation.DotPhase {
+    private func dotPhase(isRunning: Bool, animationStep: Int) -> TimerStatusPresentation.DotPhase {
         guard isRunning else {
             return .hidden
         }

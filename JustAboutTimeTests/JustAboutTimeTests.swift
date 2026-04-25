@@ -132,6 +132,13 @@ struct JustAboutTimeTests {
 
         #expect(appSource.contains("MenuBarExtra("))
         #expect(appSource.contains("WindowGroup") == false)
+        #expect(appSource.contains("MenuBarView(timerStore: timerStore)"))
+    }
+
+    @Test func menuBarViewAcceptsTimerStore() throws {
+        let menuSource = try source(at: projectFilePath("JustAboutTime/MenuBarView.swift"))
+
+        #expect(menuSource.contains("let timerStore: TimerStore"))
     }
 
     @Test func menuBarViewKeepsQuitPath() throws {

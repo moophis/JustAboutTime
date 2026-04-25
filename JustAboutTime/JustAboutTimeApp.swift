@@ -6,7 +6,7 @@ struct JustAboutTimeApp: App {
 
     var body: some Scene {
         MenuBarExtra(timerStore.statusPresentation.text, systemImage: AppConfiguration.menuBarSystemImage) {
-            MenuBarView()
+            MenuBarView(timerStore: timerStore)
         }
         .menuBarExtraStyle(.menu)
     }
