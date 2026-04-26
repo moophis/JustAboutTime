@@ -42,6 +42,6 @@ struct StatusBarPresenter {
             return .hidden
         }
 
-        return animationStep.isMultiple(of: 2) ? .leading : .trailing
+        return animationStep.isMultiple(of: 2) ? .leading : .hidden
     }
 }

@@ -17,6 +17,7 @@ final class TimerStore: ObservableObject {
     @Published private(set) var activeSession: TimerSession?
     @Published private(set) var statusText: String = "00:00"
     @Published private(set) var statusPresentation: TimerStatusPresentation
+    @Published private(set) var countdownProgress: CountdownProgressPresentation?
     @Published private(set) var latestEvent: Event?
     @Published private(set) var latestHistoryError: HistoryStore.HistoryError?
 
@@ -52,6 +53,7 @@ final class TimerStore: ObservableObject {
         self.tickInterval = tickInterval
         repeatableStartMode = nil
         activeSession = nil
+        countdownProgress = nil
         latestEvent = nil
         latestHistoryError = nil
         statusPresentation = presenter.presentation(for: .idle, animationStep: 0)
@@ -193,9 +195,26 @@ final class TimerStore: ObservableObject {
 
         activeSession = session
         latestEvent = events.last.map(Event.init)
-        statusText = presenter.presentation(for: snapshot(for: session, referenceTime: referenceTime), animationStep: animationStep).text
-        statusPresentation = presenter.presentation(for: snapshot(for: session, referenceTime: referenceTime), animationStep: animationStep)
+        let snapshot = snapshot(for: session, referenceTime: referenceTime)
+        let presentation = presenter.presentation(for: snapshot, animationStep: animationStep)
+        statusText = presentation.text
+        statusPresentation = presentation
+        countdownProgress = countdownProgress(for: session, referenceTime: referenceTime)
         updateTickTask(for: session)
+    }
+
+    private func countdownProgress(for session: TimerSession?, referenceTime: Date) -> CountdownProgressPresentation? {
+        guard let session,
+              let duration = session.originalDuration,
+              duration > 0,
+              let remaining = session.remainingTime(at: referenceTime) else {
+            return nil
+        }
+
+        return CountdownProgressPresentation(
+            fractionComplete: min(1, max(0, remaining / duration)),
+            isWarning: remaining <= duration * 0.1
+        )
     }
 
     private func snapshot(for session: TimerSession?, referenceTime: Date) -> TimerStatusSnapshot {
@@ -268,6 +287,11 @@ final class TimerStore: ObservableObject {
         tickTask = nil
         currentTickTaskGeneration = nil
     }
+}
+
+struct CountdownProgressPresentation: Equatable {
+    let fractionComplete: Double
+    let isWarning: Bool
 }
 
 private extension TimerStore.Event {

@@ -184,7 +184,8 @@ struct JustAboutTimeTests {
         #expect(appSource.contains("MenuBarExtra"))
         #expect(appSource.contains("WindowGroup") == false)
         #expect(appSource.contains("MenuBarView(timerStore: timerStore, preferencesStore: preferencesStore)"))
-        #expect(appSource.contains("StatusBarLabelView(presentation: timerStore.statusPresentation)"))
+        #expect(appSource.contains("presentation: timerStore.statusPresentation"))
+        #expect(appSource.contains("countdownProgress: timerStore.countdownProgress"))
         #expect(appSource.contains("@StateObject private var historyStore: HistoryStore"))
         #expect(appSource.contains("@StateObject private var notificationManager: NotificationManager"))
         #expect(appSource.contains("@StateObject private var shortcutManager: ShortcutManager"))
@@ -249,9 +250,10 @@ struct JustAboutTimeTests {
     @Test func statusBarLabelKeepsFixedDotSlots() throws {
         let appSource = try source(at: projectFilePath("JustAboutTime/JustAboutTimeApp.swift"))
 
-        #expect(appSource.contains("dotSlot(isVisible: presentation.dotPhase == .leading)"))
-        #expect(appSource.contains("dotSlot(isVisible: presentation.dotPhase == .trailing)"))
-        #expect(appSource.contains(".opacity(isVisible ? 1 : 0)"))
+        #expect(appSource.contains("Image(nsImage: StatusBarLabelImageRenderer.image"))
+        #expect(appSource.contains("presentation.dotPhase == .leading"))
+        #expect(appSource.contains("presentation.dotPhase == .trailing"))
+        #expect(appSource.contains("drawProgress("))
     }
 
     @Test func projectKeepsKeyboardShortcutsPackageAndAppIconSetting() throws {

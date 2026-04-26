@@ -24,7 +24,7 @@ struct TimerStoreTests {
         )
 
         #expect(presentation.text == "02:05")
-        #expect(presentation.dotPhase == .trailing)
+        #expect(presentation.dotPhase == .hidden)
     }
 
     @Test func statusBarPresenterFormatsPausedCountUpSnapshot() {
@@ -49,7 +49,8 @@ struct TimerStoreTests {
         let idleA = presenter.presentation(for: .idle, animationStep: 0)
         let idleB = presenter.presentation(for: .idle, animationStep: 1)
 
-        #expect(runningA.dotPhase != runningB.dotPhase)
+        #expect(runningA.dotPhase == .leading)
+        #expect(runningB.dotPhase == .hidden)
         #expect(pausedA.dotPhase == pausedB.dotPhase)
         #expect(idleA.dotPhase == idleB.dotPhase)
     }
@@ -77,6 +78,29 @@ struct TimerStoreTests {
         store.startCountdown(duration: 60)
 
         #expect(store.statusPresentation.text == "01:00")
+    }
+
+    @MainActor
+    @Test func countdownProgressTracksRemainingFractionAndWarningWindow() {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let store = TimerStore(now: { clock.now })
+
+        #expect(store.countdownProgress == nil)
+
+        store.startCountdown(duration: 100)
+        #expect(store.countdownProgress == CountdownProgressPresentation(fractionComplete: 1, isWarning: false))
+
+        clock.advance(by: 50)
+        store.pause()
+        #expect(store.countdownProgress == CountdownProgressPresentation(fractionComplete: 0.5, isWarning: false))
+
+        store.resume()
+        clock.advance(by: 40)
+        store.pause()
+        #expect(store.countdownProgress == CountdownProgressPresentation(fractionComplete: 0.1, isWarning: true))
+
+        store.finish()
+        #expect(store.countdownProgress == nil)
     }
 
     @MainActor
