@@ -188,13 +188,16 @@ final class TimerStore: ObservableObject {
 
     private func synchronizePresentation(referenceTime: Date, events: [TimerStateMachine.Event] = []) {
         let session = stateMachine.session
+        let isShowingCompletedDot = latestEvent == .countdownCompleted
 
-        if session?.isRunning != true {
+        if !isShowingCompletedDot && session?.isRunning != true {
             animationStep = 0
         }
 
         activeSession = session
-        latestEvent = events.last.map(Event.init)
+        if let lastEvent = events.last {
+            latestEvent = Event(lastEvent)
+        }
         let snapshot = snapshot(for: session, referenceTime: referenceTime)
         let presentation = presenter.presentation(for: snapshot, animationStep: animationStep)
         statusText = presentation.text
@@ -218,29 +221,38 @@ final class TimerStore: ObservableObject {
     }
 
     private func snapshot(for session: TimerSession?, referenceTime: Date) -> TimerStatusSnapshot {
-        guard let session else {
-            return .idle
+        if let session {
+            switch session.phase {
+            case .runningCountdown, .pausedCountdown:
+                return .countdown(
+                    remaining: session.remainingTime(at: referenceTime) ?? 0,
+                    isRunning: session.isRunning
+                )
+            case .runningCountUp, .pausedCountUp:
+                return .countUp(
+                    elapsed: session.elapsedTime(at: referenceTime),
+                    isRunning: session.isRunning
+                )
+            }
         }
 
-        switch session.phase {
-        case .runningCountdown, .pausedCountdown:
-            return .countdown(
-                remaining: session.remainingTime(at: referenceTime) ?? 0,
-                isRunning: session.isRunning
-            )
-        case .runningCountUp, .pausedCountUp:
-            return .countUp(
-                elapsed: session.elapsedTime(at: referenceTime),
-                isRunning: session.isRunning
-            )
+        if latestEvent == .countdownCompleted {
+            return .countdownCompleted
         }
+
+        return .idle
     }
 
     private func updateTickTask(for session: TimerSession?) {
-        guard session?.isRunning == true else {
+        let isShowingCompletedDot = latestEvent == .countdownCompleted
+
+        if session?.isRunning == true {
             tickTask?.cancel()
             tickTask = nil
             currentTickTaskGeneration = nil
+        }
+
+        guard session?.isRunning == true || isShowingCompletedDot else {
             return
         }
 

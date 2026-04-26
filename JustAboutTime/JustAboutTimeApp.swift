@@ -84,7 +84,8 @@ private enum StatusBarLabelImageRenderer {
         let textOrigin = NSPoint(x: rowOriginX + Layout.dotDiameter + Layout.dotSpacing, y: progressHeight)
 
         drawDot(
-            isVisible: presentation.dotPhase == .leading,
+            isVisible: presentation.dotPhase == .leading || presentation.dotPhase == .leadingRed,
+            color: presentation.dotPhase == .leadingRed ? .systemRed : .labelColor,
             in: NSRect(
                 x: rowOriginX,
                 y: progressHeight + (textRowSize.height - Layout.dotDiameter) / 2,
@@ -129,12 +130,12 @@ private enum StatusBarLabelImageRenderer {
         ]
     }
 
-    private static func drawDot(isVisible: Bool, in rect: NSRect) {
+    private static func drawDot(isVisible: Bool, color: NSColor = .labelColor, in rect: NSRect) {
         guard isVisible else {
             return
         }
 
-        NSColor.labelColor.setFill()
+        color.setFill()
         NSBezierPath(ovalIn: rect).fill()
     }
 
