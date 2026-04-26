@@ -254,11 +254,12 @@ struct JustAboutTimeTests {
         #expect(appSource.contains(".opacity(isVisible ? 1 : 0)"))
     }
 
-    @Test func projectKeepsKeyboardShortcutsPackageAndNoAppIconSetting() throws {
+    @Test func projectKeepsKeyboardShortcutsPackageAndAppIconSetting() throws {
         let projectSource = try source(at: projectFilePath("JustAboutTime.xcodeproj/project.pbxproj"))
 
         #expect(projectSource.contains("https://github.com/sindresorhus/KeyboardShortcuts.git"))
-        #expect(projectSource.contains("ASSETCATALOG_COMPILER_APPICON_NAME") == false)
+        #expect(projectSource.contains("Assets.xcassets in Resources"))
+        #expect(projectSource.contains("ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon"))
     }
 
     @Test func preferencesViewIncludesPresetShortcutAndNotificationSections() throws {
