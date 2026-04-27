@@ -133,9 +133,12 @@ final class NotificationManager: ObservableObject {
         _ = await currentAuthorizationStatus(forceRefresh: true)
     }
 
-    func requestAuthorization() async {
-        _ = await authorizedStatus()
+func requestAuthorization() async {
+    let status = await authorizedStatus()
+    if authorizationStatus != status {
+        authorizationStatus = status
     }
+}
 
     func notifyCountdownCompleted(duration: TimeInterval) async {
         var status = await currentAuthorizationStatus(forceRefresh: true)
