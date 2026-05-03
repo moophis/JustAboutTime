@@ -36,6 +36,11 @@ struct JustAboutTimeApp: App {
             HistoryView(historyStore: historyStore, timerStore: timerStore)
         }
 
+        Window("About JustAboutTime", id: AboutWindow.id) {
+            AboutView()
+        }
+        .windowResizability(.contentSize)
+
         Settings {
             PreferencesView(preferencesStore: preferencesStore, notificationManager: notificationManager)
         }
@@ -44,6 +49,10 @@ struct JustAboutTimeApp: App {
 
 enum HistoryWindow {
     static let id = "history"
+}
+
+enum AboutWindow {
+    static let id = "about"
 }
 
 private struct StatusBarLabelView: View {

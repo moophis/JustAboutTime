@@ -30,6 +30,7 @@ struct MenuBarView: View {
         }
 
         Divider()
+        aboutButton
         historyButton
         preferencesButton
 
@@ -54,6 +55,7 @@ struct MenuBarView: View {
         StableTimerStatusView(timerStore: timerStore)
 
         Divider()
+        aboutButton
         historyButton
         preferencesButton
 
@@ -97,6 +99,14 @@ struct MenuBarView: View {
         Button("Open History…") {
             activateApp()
             openWindow(id: HistoryWindow.id)
+            activateAppOnNextRunLoop()
+        }
+    }
+
+    private var aboutButton: some View {
+        Button("About JustAboutTime") {
+            activateApp()
+            openWindow(id: AboutWindow.id)
             activateAppOnNextRunLoop()
         }
     }
