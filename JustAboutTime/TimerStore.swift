@@ -216,17 +216,24 @@ final class TimerStore: ObservableObject {
 
         return CountdownProgressPresentation(
             fractionComplete: min(1, max(0, remaining / duration)),
-            isWarning: remaining <= duration * 0.1
+            isWarning: isCountdownWarning(remaining: remaining, duration: duration)
         )
+    }
+
+    private func isCountdownWarning(remaining: TimeInterval, duration: TimeInterval) -> Bool {
+        remaining <= duration * 0.1
     }
 
     private func snapshot(for session: TimerSession?, referenceTime: Date) -> TimerStatusSnapshot {
         if let session {
             switch session.phase {
             case .runningCountdown, .pausedCountdown:
+                let remaining = session.remainingTime(at: referenceTime) ?? 0
+                let duration = session.originalDuration ?? 0
                 return .countdown(
-                    remaining: session.remainingTime(at: referenceTime) ?? 0,
-                    isRunning: session.isRunning
+                    remaining: remaining,
+                    isRunning: session.isRunning,
+                    isWarning: duration > 0 && isCountdownWarning(remaining: remaining, duration: duration)
                 )
             case .runningCountUp, .pausedCountUp:
                 return .countUp(

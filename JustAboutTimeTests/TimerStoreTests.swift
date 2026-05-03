@@ -19,7 +19,7 @@ struct TimerStoreTests {
         let presenter = StatusBarPresenter()
 
         let presentation = presenter.presentation(
-            for: .countdown(remaining: 125, isRunning: true),
+            for: .countdown(remaining: 125, isRunning: true, isWarning: false),
             animationStep: 1
         )
 
@@ -53,6 +53,41 @@ struct TimerStoreTests {
         #expect(runningB.dotPhase == .hidden)
         #expect(pausedA.dotPhase == pausedB.dotPhase)
         #expect(idleA.dotPhase == idleB.dotPhase)
+    }
+
+    @Test func statusBarPresenterAlternatesWarningCountdownDotsInRed() {
+        let presenter = StatusBarPresenter()
+
+        let leading = presenter.presentation(
+            for: .countdown(remaining: 10, isRunning: true, isWarning: true),
+            animationStep: 0
+        )
+        let trailing = presenter.presentation(
+            for: .countdown(remaining: 9, isRunning: true, isWarning: true),
+            animationStep: 1
+        )
+        let paused = presenter.presentation(
+            for: .countdown(remaining: 8, isRunning: false, isWarning: true),
+            animationStep: 2
+        )
+
+        #expect(leading.text == "00:10")
+        #expect(leading.dotPhase == .leadingRed)
+        #expect(trailing.text == "00:09")
+        #expect(trailing.dotPhase == .trailingRed)
+        #expect(paused.dotPhase == .hidden)
+    }
+
+    @Test func statusBarPresenterAlternatesCompletedCountdownDotsInRed() {
+        let presenter = StatusBarPresenter()
+
+        let leading = presenter.presentation(for: .countdownCompleted, animationStep: 0)
+        let trailing = presenter.presentation(for: .countdownCompleted, animationStep: 1)
+
+        #expect(leading.text == "00:00")
+        #expect(leading.dotPhase == .leadingRed)
+        #expect(trailing.text == "00:00")
+        #expect(trailing.dotPhase == .trailingRed)
     }
 
     @MainActor
@@ -107,6 +142,37 @@ struct TimerStoreTests {
 
         store.finish()
         #expect(store.countdownProgress == nil)
+    }
+
+    @MainActor
+    @Test func countdownWarningDotAlternatesWhileRunning() async {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let sleeper = TestSleeper()
+        let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
+            now: { clock.now },
+            sleep: sleeper.sleep(for:)
+        )
+
+        store.startCountdown(duration: 100)
+
+        clock.advance(by: 90)
+        await sleeper.resumeOnce()
+        while store.statusPresentation.text != "00:10" {
+            await Task.yield()
+        }
+
+        let firstWarningDotPhase = store.statusPresentation.dotPhase
+        #expect([DotPhase.leadingRed, .trailingRed].contains(firstWarningDotPhase))
+
+        clock.advance(by: 1)
+        await sleeper.resumeOnce()
+        while store.statusPresentation.text != "00:09" {
+            await Task.yield()
+        }
+
+        #expect([DotPhase.leadingRed, .trailingRed].contains(store.statusPresentation.dotPhase))
+        #expect(store.statusPresentation.dotPhase != firstWarningDotPhase)
     }
 
     @MainActor
@@ -224,6 +290,19 @@ struct TimerStoreTests {
 
         #expect(store.latestEvent == .countdownCompleted)
         #expect(store.activeSession == nil)
+        #expect(store.statusPresentation.text == "00:00")
+        let completedDotPhase = store.statusPresentation.dotPhase
+        #expect([DotPhase.leadingRed, .trailingRed].contains(completedDotPhase))
+
+        clock.advance(by: 1)
+        await sleeper.resumeOnce()
+        while store.statusPresentation.dotPhase == completedDotPhase {
+            await Task.yield()
+        }
+
+        #expect(store.statusPresentation.text == "00:00")
+        #expect([DotPhase.leadingRed, .trailingRed].contains(store.statusPresentation.dotPhase))
+        #expect(store.statusPresentation.dotPhase != completedDotPhase)
     }
 
     @MainActor

@@ -91,10 +91,12 @@ private enum StatusBarLabelImageRenderer {
 
         let rowOriginX = (imageSize.width - textRowSize.width) / 2
         let textOrigin = NSPoint(x: rowOriginX + Layout.dotDiameter + Layout.dotSpacing, y: progressHeight)
+        let isLeadingRed = presentation.dotPhase == .leadingRed
+        let isTrailingRed = presentation.dotPhase == .trailingRed
 
         drawDot(
-            isVisible: presentation.dotPhase == .leading || presentation.dotPhase == .leadingRed,
-            color: presentation.dotPhase == .leadingRed ? .systemRed : .labelColor,
+            isVisible: presentation.dotPhase == .leading || isLeadingRed,
+            color: isLeadingRed ? .systemRed : .labelColor,
             in: NSRect(
                 x: rowOriginX,
                 y: progressHeight + (textRowSize.height - Layout.dotDiameter) / 2,
@@ -106,7 +108,8 @@ private enum StatusBarLabelImageRenderer {
         presentation.text.draw(at: textOrigin, withAttributes: attributes)
 
         drawDot(
-            isVisible: presentation.dotPhase == .trailing,
+            isVisible: presentation.dotPhase == .trailing || isTrailingRed,
+            color: isTrailingRed ? .systemRed : .labelColor,
             in: NSRect(
                 x: textOrigin.x + textSize.width + Layout.dotSpacing,
                 y: progressHeight + (textRowSize.height - Layout.dotDiameter) / 2,
