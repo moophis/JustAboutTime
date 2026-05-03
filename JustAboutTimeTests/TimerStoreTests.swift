@@ -57,7 +57,10 @@ struct TimerStoreTests {
 
     @MainActor
     @Test func timerStoreStartsIdleAndUpdatesPresentationWhenCountdownStarts() {
-        let store = TimerStore(now: { Date(timeIntervalSinceReferenceDate: 1_000) })
+        let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
+            now: { Date(timeIntervalSinceReferenceDate: 1_000) }
+        )
 
         #expect(store.statusPresentation.text == "00:00")
 
@@ -73,7 +76,7 @@ struct TimerStoreTests {
             Date(timeIntervalSinceReferenceDate: 1_000),
             Date(timeIntervalSinceReferenceDate: 1_000.9)
         ])
-        let store = TimerStore(now: { clock.now() })
+        let store = TimerStore(historyStore: makeIsolatedHistoryStore(), now: { clock.now() })
 
         store.startCountdown(duration: 60)
 
@@ -83,7 +86,10 @@ struct TimerStoreTests {
     @MainActor
     @Test func countdownProgressTracksRemainingFractionAndWarningWindow() {
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
-        let store = TimerStore(now: { clock.now })
+        let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
+            now: { clock.now }
+        )
 
         #expect(store.countdownProgress == nil)
 
@@ -108,7 +114,11 @@ struct TimerStoreTests {
         let center = TestNotificationCenter(initialStatus: .notDetermined)
         let notificationManager = NotificationManager(client: center.makeClient())
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
-        let store = TimerStore(notificationManager: notificationManager, now: { clock.now })
+        let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
+            notificationManager: notificationManager,
+            now: { clock.now }
+        )
 
         store.startCountdown(duration: 90)
         store.restart()
@@ -122,6 +132,7 @@ struct TimerStoreTests {
     @Test func startPauseDoesNothingWhileIdleWithoutRecentMode() {
         let preferencesStore = PreferencesStore(userDefaults: makeUserDefaults())
         let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
             preferencesStore: preferencesStore,
             now: { Date(timeIntervalSinceReferenceDate: 1_000) }
         )
@@ -135,7 +146,7 @@ struct TimerStoreTests {
     @MainActor
     @Test func startPauseRepeatsMostRecentCountdownWhenIdle() throws {
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
-        let store = TimerStore(now: { clock.now })
+        let store = TimerStore(historyStore: makeIsolatedHistoryStore(), now: { clock.now })
 
         store.startCountdown(duration: 90)
         clock.advance(by: 30)
@@ -155,7 +166,7 @@ struct TimerStoreTests {
     @MainActor
     @Test func startPauseRepeatsMostRecentCountUpWhenIdle() throws {
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
-        let store = TimerStore(now: { clock.now })
+        let store = TimerStore(historyStore: makeIsolatedHistoryStore(), now: { clock.now })
 
         store.startCountUp()
         clock.advance(by: 45)
@@ -175,7 +186,7 @@ struct TimerStoreTests {
     @MainActor
     @Test func startPauseTogglesActiveSessionState() {
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
-        let store = TimerStore(now: { clock.now })
+        let store = TimerStore(historyStore: makeIsolatedHistoryStore(), now: { clock.now })
 
         store.startCountdown(duration: 90)
         clock.advance(by: 15)
@@ -195,7 +206,11 @@ struct TimerStoreTests {
     @Test func timerStoreSurfacesCountdownCompletionEvents() async throws {
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
         let sleeper = TestSleeper()
-        let store = TimerStore(now: { clock.now }, sleep: sleeper.sleep(for:))
+        let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
+            now: { clock.now },
+            sleep: sleeper.sleep(for:)
+        )
 
         #expect(store.latestEvent == nil)
 
@@ -215,7 +230,7 @@ struct TimerStoreTests {
     @Test func shortcutManagerRegistersGlobalHandlersAndRoutesActions() {
         let registry = TestShortcutRegistry()
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
-        let store = TimerStore(now: { clock.now })
+        let store = TimerStore(historyStore: makeIsolatedHistoryStore(), now: { clock.now })
         let manager = ShortcutManager(
             timerStore: store,
             client: .init(onKeyUp: { name, handler in
@@ -259,7 +274,11 @@ struct TimerStoreTests {
         let registry = TestShortcutRegistry()
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
         let sleeper = TestSleeper()
-        let store = TimerStore(now: { clock.now }, sleep: sleeper.sleep(for:))
+        let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
+            now: { clock.now },
+            sleep: sleeper.sleep(for:)
+        )
         let manager = ShortcutManager(
             timerStore: store,
             client: .init(onKeyUp: { name, handler in
@@ -304,6 +323,7 @@ struct TimerStoreTests {
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
         let sleeper = TestSleeper()
         let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
             notificationManager: notificationManager,
             now: { clock.now },
             sleep: sleeper.sleep(for:)
@@ -334,7 +354,11 @@ struct TimerStoreTests {
         let center = TestNotificationCenter(initialStatus: .denied)
         let notificationManager = NotificationManager(client: center.makeClient())
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
-        let store = TimerStore(notificationManager: notificationManager, now: { clock.now })
+        let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
+            notificationManager: notificationManager,
+            now: { clock.now }
+        )
 
         await notificationManager.refresh()
 
@@ -351,7 +375,11 @@ struct TimerStoreTests {
     @Test func timerStorePublishesTickUpdatesFromMainThread() async throws {
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
         let sleeper = TestSleeper()
-        let store = TimerStore(now: { clock.now }, sleep: sleeper.sleep(for:))
+        let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
+            now: { clock.now },
+            sleep: sleeper.sleep(for:)
+        )
         let stream = AsyncStream.makeStream(of: (Bool, String).self)
         var cancellables = Set<AnyCancellable>()
         var iterator = stream.stream.makeAsyncIterator()
@@ -498,7 +526,11 @@ struct TimerStoreTests {
         let center = TestNotificationCenter(initialStatus: .authorized)
         let notificationManager = NotificationManager(client: center.makeClient())
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
-        let store = TimerStore(notificationManager: notificationManager, now: { clock.now })
+        let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
+            notificationManager: notificationManager,
+            now: { clock.now }
+        )
 
         await notificationManager.refresh()
 
@@ -523,7 +555,11 @@ struct TimerStoreTests {
         let center = TestNotificationCenter(initialStatus: .authorized)
         let notificationManager = NotificationManager(client: center.makeClient())
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
-        let store = TimerStore(notificationManager: notificationManager, now: { clock.now })
+        let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
+            notificationManager: notificationManager,
+            now: { clock.now }
+        )
 
         await notificationManager.refresh()
 
@@ -704,6 +740,15 @@ private func makeTemporaryDirectory() throws -> URL {
     let directoryURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
     return directoryURL
+}
+
+@MainActor
+private func makeIsolatedHistoryStore() -> HistoryStore {
+    let fileURL = FileManager.default.temporaryDirectory
+        .appendingPathComponent("TimerStoreTests.\(UUID().uuidString)", isDirectory: true)
+        .appendingPathComponent("history.json")
+
+    return HistoryStore(fileURL: fileURL)
 }
 
 private func makeUserDefaults() -> UserDefaults {
