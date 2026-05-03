@@ -34,6 +34,7 @@ final class TimerStore: ObservableObject {
     private var tickTaskGeneration = 0
     private var currentTickTaskGeneration: Int?
     private var tickTask: Task<Void, Never>?
+    private var lastCompletedCountdownDuration: TimeInterval?
 
     init(
         presenter: StatusBarPresenter = StatusBarPresenter(),
@@ -145,6 +146,9 @@ final class TimerStore: ObservableObject {
     private func send(_ action: TimerStateMachine.Action, referenceTime: Date) {
         let previousSession = stateMachine.session
         let events = stateMachine.send(action)
+        if events.contains(.countdownCompleted) {
+            lastCompletedCountdownDuration = previousSession?.originalDuration
+        }
         persistHistoryIfNeeded(previousSession: previousSession, events: events, completedAt: referenceTime)
         notifyIfNeeded(previousSession: previousSession, events: events)
         synchronizePresentation(referenceTime: referenceTime, events: events)
@@ -207,6 +211,10 @@ final class TimerStore: ObservableObject {
     }
 
     private func countdownProgress(for session: TimerSession?, referenceTime: Date) -> CountdownProgressPresentation? {
+        if session == nil, latestEvent == .countdownCompleted, let duration = lastCompletedCountdownDuration, duration > 0 {
+            return CountdownProgressPresentation(fractionComplete: 1.0, isWarning: true)
+        }
+
         guard let session,
               let duration = session.originalDuration,
               duration > 0,
@@ -294,6 +302,9 @@ final class TimerStore: ObservableObject {
             animationStep += 1
             let previousSession = stateMachine.session
             let events = stateMachine.send(.tick(now: currentTime))
+            if events.contains(.countdownCompleted) {
+                lastCompletedCountdownDuration = previousSession?.originalDuration
+            }
             persistHistoryIfNeeded(previousSession: previousSession, events: events, completedAt: currentTime)
             notifyIfNeeded(previousSession: previousSession, events: events)
             synchronizePresentation(referenceTime: currentTime, events: events)

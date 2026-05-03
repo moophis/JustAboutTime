@@ -291,6 +291,7 @@ struct TimerStoreTests {
         #expect(store.latestEvent == .countdownCompleted)
         #expect(store.activeSession == nil)
         #expect(store.statusPresentation.text == "00:00")
+        #expect(store.countdownProgress == CountdownProgressPresentation(fractionComplete: 1, isWarning: true))
         let completedDotPhase = store.statusPresentation.dotPhase
         #expect([DotPhase.leadingRed, .trailingRed].contains(completedDotPhase))
 
@@ -301,6 +302,7 @@ struct TimerStoreTests {
         }
 
         #expect(store.statusPresentation.text == "00:00")
+        #expect(store.countdownProgress == CountdownProgressPresentation(fractionComplete: 1, isWarning: true))
         #expect([DotPhase.leadingRed, .trailingRed].contains(store.statusPresentation.dotPhase))
         #expect(store.statusPresentation.dotPhase != completedDotPhase)
     }
