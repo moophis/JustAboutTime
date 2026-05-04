@@ -3,10 +3,12 @@
 <plist version="1.0">
 <dict>
 	<key>method</key>
-	<string>package</string>
+	<string>developer-id</string>
+	<key>destination</key>
+	<string>export</string>
 	<key>signingStyle</key>
 	<string>manual</string>
-	<key>codeSignIdentity</key>
-	<string>-</string>
+	<key>signingCertificate</key>
+	<string>Developer ID Application</string>
 </dict>
 </plist>
