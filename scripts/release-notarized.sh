@@ -14,6 +14,7 @@ BUILD_DIR="$ROOT_DIR/build/release"
 ARCHIVE_PATH="$BUILD_DIR/$APP_NAME.xcarchive"
 EXPORT_DIR="$BUILD_DIR/export"
 EXPORT_OPTIONS="$BUILD_DIR/ExportOptions.generated.plist"
+DMG_ROOT="$BUILD_DIR/dmg-root"
 NOTARY_ZIP="$BUILD_DIR/$APP_NAME-notary.zip"
 
 fail() {
@@ -55,7 +56,9 @@ require_env APPLE_TEAM_ID
 require_env APPLE_APP_PASSWORD
 
 require_command ditto
+require_command hdiutil
 require_command spctl
+require_command codesign
 require_command xcodebuild
 require_command xcrun
 
@@ -97,7 +100,7 @@ APP_PATH="$EXPORT_DIR/$APP_NAME.app"
 
 INFO_PLIST="$APP_PATH/Contents/Info.plist"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$INFO_PLIST")"
-FINAL_ZIP="$BUILD_DIR/$APP_NAME-$VERSION.zip"
+FINAL_DMG="$BUILD_DIR/$APP_NAME-$VERSION.dmg"
 
 info "Packaging app for notarization"
 /usr/bin/ditto -c -k --keepParent "$APP_PATH" "$NOTARY_ZIP"
@@ -116,8 +119,37 @@ xcrun stapler validate "$APP_PATH"
 info "Assessing app with Gatekeeper"
 spctl --assess --type execute --verbose=4 "$APP_PATH"
 
-info "Creating final release ZIP"
-rm -f "$FINAL_ZIP"
-/usr/bin/ditto -c -k --keepParent "$APP_PATH" "$FINAL_ZIP"
+info "Creating DMG"
+rm -rf "$DMG_ROOT"
+mkdir -p "$DMG_ROOT"
+cp -R "$APP_PATH" "$DMG_ROOT/"
+ln -s /Applications "$DMG_ROOT/Applications"
+hdiutil create \
+  -volname "$APP_NAME $VERSION" \
+  -srcfolder "$DMG_ROOT" \
+  -ov \
+  -format UDZO \
+  "$FINAL_DMG"
 
-info "Release artifact ready: $FINAL_ZIP"
+info "Signing DMG"
+codesign --sign 'Developer ID Application' \
+  --timestamp \
+  --options runtime \
+  "$FINAL_DMG"
+codesign --verify --strict --verbose=4 "$FINAL_DMG"
+
+info "Submitting DMG notarization request"
+xcrun notarytool submit "$FINAL_DMG" \
+  --apple-id "$APPLE_ID" \
+  --team-id "$APPLE_TEAM_ID" \
+  --password "$APPLE_APP_PASSWORD" \
+  --wait
+
+info "Stapling DMG notarization ticket"
+xcrun stapler staple "$FINAL_DMG"
+xcrun stapler validate "$FINAL_DMG"
+
+info "Assessing DMG with Gatekeeper"
+spctl --assess --type open --context context:primary-signature --verbose=4 "$FINAL_DMG"
+
+info "Release artifact ready: $FINAL_DMG"

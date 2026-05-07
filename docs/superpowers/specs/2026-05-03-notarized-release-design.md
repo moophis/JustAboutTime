@@ -24,7 +24,11 @@ The release flow will:
 4. Submit the package with `xcrun notarytool submit --wait`.
 5. Staple the notarization ticket to `JustAboutTime.app`.
 6. Verify the stapled app with Gatekeeper using `spctl`.
-7. Produce a final distributable ZIP that includes the stapled app.
+7. Create a DMG from the stapled app.
+8. Sign the DMG with Developer ID.
+9. Submit the signed DMG with `xcrun notarytool submit --wait`.
+10. Staple the notarization ticket to the DMG.
+11. Verify the DMG with Gatekeeper using `spctl --type open --context context:primary-signature`.
 
 ## Credentials
 
@@ -45,7 +49,7 @@ The Developer ID certificate must already be installed in the local login keycha
 
 ## Artifact Layout
 
-Use `build/release/` for generated output so release artifacts stay separate from Xcode DerivedData. The final artifact will be `JustAboutTime-<version>.zip`, suitable for upload to a GitHub release.
+Use `build/release/` for generated output so release artifacts stay separate from Xcode DerivedData. The final artifact will be `JustAboutTime-<version>.dmg`, suitable for upload to a GitHub release.
 
 ## Error Handling
 
@@ -60,7 +64,11 @@ Successful release requires:
 - `xcrun notarytool submit --wait` reports accepted status.
 - `xcrun stapler staple` succeeds on `JustAboutTime.app`.
 - `spctl --assess --type execute --verbose` accepts `JustAboutTime.app`.
-- The final ZIP contains the stapled app, not the pre-notarization export.
+- `hdiutil create` succeeds for the DMG built from the stapled app.
+- `codesign --verify --strict --verbose` accepts the DMG.
+- `xcrun notarytool submit --wait` accepts the DMG.
+- `xcrun stapler staple` succeeds on the DMG.
+- `spctl --assess --type open --context context:primary-signature --verbose` accepts the DMG.
 
 ## Out Of Scope
 

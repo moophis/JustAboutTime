@@ -1,6 +1,6 @@
 # Release
 
-Use `scripts/release-notarized.sh` to create a Developer ID signed, notarized, stapled macOS release ZIP.
+Use `scripts/release-notarized.sh` to create a Developer ID signed, notarized, stapled macOS release DMG.
 
 ## Prerequisites
 
@@ -36,9 +36,13 @@ The script will:
 3. Submit a temporary ZIP to Apple notarization.
 4. Staple the notarization ticket to `JustAboutTime.app`.
 5. Verify the app with Gatekeeper.
-6. Create `build/release/JustAboutTime-<version>.zip`.
+6. Create `build/release/JustAboutTime-<version>.dmg` from the stapled app.
+7. Sign the DMG with Developer ID.
+8. Submit the signed DMG to Apple notarization.
+9. Staple the notarization ticket to the DMG.
+10. Verify the DMG with Gatekeeper.
 
-Upload the final ZIP from `build/release/` to the GitHub release. Do not upload `JustAboutTime-notary.zip`; it is only the temporary notarization submission package.
+Upload the final DMG from `build/release/` to the GitHub release. Do not upload `JustAboutTime-notary.zip`; it is only the temporary app notarization submission package.
 
 ## Optional Overrides
 
