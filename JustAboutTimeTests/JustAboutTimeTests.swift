@@ -273,9 +273,16 @@ struct JustAboutTimeTests {
         #expect(projectSource.contains("ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon"))
     }
 
-    @Test func preferencesViewIncludesGroupedPresetShortcutAndNotificationSections() throws {
+    @Test func preferencesViewIncludesTabbedPresetShortcutAndNotificationPages() throws {
         let source = try source(at: projectFilePath("JustAboutTime/PreferencesView.swift"))
 
+        #expect(source.contains("TabView"))
+        #expect(source.contains("GeneralPreferencesView(preferencesStore: preferencesStore)"))
+        #expect(source.contains("ShortcutPreferencesView(preferencesStore: preferencesStore)"))
+        #expect(source.contains("NotificationPreferencesView(notificationManager: notificationManager)"))
+        #expect(source.contains("Label(\"General\", systemImage: \"gearshape\")"))
+        #expect(source.contains("Label(\"Shortcuts\", systemImage: \"keyboard\")"))
+        #expect(source.contains("Label(\"Notifications\", systemImage: \"bell\")"))
         #expect(source.contains("PreferencesGroup(title: \"COUNTDOWN\")"))
         #expect(source.contains("PreferencesGroup(title: \"SHORTCUTS\")"))
         #expect(source.contains("KeyboardShortcuts.Recorder(for: name)"))
