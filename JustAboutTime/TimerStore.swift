@@ -36,6 +36,8 @@ final class TimerStore: ObservableObject {
     private var tickTask: Task<Void, Never>?
     private var lastCompletedCountdownDuration: TimeInterval?
 
+    private(set) var wasSystemPaused = false
+
     init(
         presenter: StatusBarPresenter = StatusBarPresenter(),
         historyStore: HistoryStore = HistoryStore(),
@@ -74,7 +76,22 @@ final class TimerStore: ObservableObject {
         }
     }
 
+    func systemPause() {
+        let currentTime = now()
+        guard let session = stateMachine.session, session.isRunning else { return }
+        send(.pause(now: currentTime), referenceTime: currentTime)
+        wasSystemPaused = true
+    }
+
+    func systemResume() {
+        guard wasSystemPaused else { return }
+        wasSystemPaused = false
+        let currentTime = now()
+        send(.resume(now: currentTime), referenceTime: currentTime)
+    }
+
     func startCountdown(duration: TimeInterval) {
+        wasSystemPaused = false
         let currentTime = now()
         repeatableStartMode = .countdown(duration: duration)
         preferencesStore.setLastTimerType(.countdown(duration: duration))
@@ -82,6 +99,7 @@ final class TimerStore: ObservableObject {
     }
 
     func startCountUp() {
+        wasSystemPaused = false
         let currentTime = now()
         repeatableStartMode = .countUp
         preferencesStore.setLastTimerType(.countUp)
@@ -89,6 +107,7 @@ final class TimerStore: ObservableObject {
     }
 
     func toggleStartPause() {
+        wasSystemPaused = false
         let currentTime = now()
 
         guard let session = stateMachine.session else {
@@ -115,6 +134,7 @@ final class TimerStore: ObservableObject {
     }
 
     func restart() {
+        wasSystemPaused = false
         let currentTime = now()
 
         guard stateMachine.session != nil else {
@@ -126,6 +146,7 @@ final class TimerStore: ObservableObject {
     }
 
     func finish() {
+        wasSystemPaused = false
         let currentTime = now()
         send(.finish(now: currentTime), referenceTime: currentTime)
     }

@@ -40,6 +40,21 @@ private struct GeneralPreferencesView: View {
                     )
                 }
             }
+
+            PreferencesGroup(title: "BEHAVIOR") {
+                Toggle("Open on restart", isOn: $preferencesStore.openOnRestart)
+                    .font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Toggle("Pause on screen locked", isOn: $preferencesStore.pauseOnScreenLocked)
+                    .font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Toggle("Resume on unlock", isOn: $preferencesStore.resumeOnRelogin)
+                    .font(.body.weight(.semibold))
+                    .disabled(!preferencesStore.pauseOnScreenLocked)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 

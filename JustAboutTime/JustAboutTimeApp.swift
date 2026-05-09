@@ -19,6 +19,45 @@ struct JustAboutTimeApp: App {
         _preferencesStore = StateObject(wrappedValue: preferencesStore)
         _timerStore = StateObject(wrappedValue: timerStore)
         _shortcutManager = StateObject(wrappedValue: ShortcutManager(timerStore: timerStore))
+
+        Task { @MainActor [timerStore, preferencesStore] in
+            Self.setupSystemObservers(timerStore: timerStore, preferencesStore: preferencesStore)
+        }
+    }
+
+    @MainActor
+    private static func setupSystemObservers(timerStore: TimerStore, preferencesStore: PreferencesStore) {
+        let nc = NSWorkspace.shared.notificationCenter
+
+        nc.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak timerStore, weak preferencesStore] _ in
+            Task { @MainActor in
+                guard let timerStore, let preferencesStore, preferencesStore.pauseOnScreenLocked else { return }
+                timerStore.systemPause()
+            }
+        }
+
+        nc.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak timerStore, weak preferencesStore] _ in
+            Task { @MainActor in
+                guard let timerStore, let preferencesStore, preferencesStore.resumeOnRelogin else { return }
+                timerStore.systemResume()
+            }
+        }
+
+        let dnc = DistributedNotificationCenter.default()
+
+        dnc.addObserver(forName: NSNotification.Name("com.apple.screenIsLocked"), object: nil, queue: .main) { [weak timerStore, weak preferencesStore] _ in
+            Task { @MainActor in
+                guard let timerStore, let preferencesStore, preferencesStore.pauseOnScreenLocked else { return }
+                timerStore.systemPause()
+            }
+        }
+
+        dnc.addObserver(forName: NSNotification.Name("com.apple.screenIsUnlocked"), object: nil, queue: .main) { [weak timerStore, weak preferencesStore] _ in
+            Task { @MainActor in
+                guard let timerStore, let preferencesStore, preferencesStore.resumeOnRelogin else { return }
+                timerStore.systemResume()
+            }
+        }
     }
 
     var body: some Scene {
