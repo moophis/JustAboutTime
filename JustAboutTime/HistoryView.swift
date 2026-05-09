@@ -77,15 +77,21 @@ struct HistoryView: View {
     }
 
     private func formattedDuration(_ duration: TimeInterval) -> String {
-        let totalMinutes = Int(duration.rounded(.down)) / 60
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
+        let totalSeconds = Int(duration.rounded(.down))
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
 
         if hours > 0 {
+            if seconds > 0 {
+                return minutes > 0 ? "\(hours)h \(minutes)m \(seconds)s" : "\(hours)h \(seconds)s"
+            }
             return minutes == 0 ? "\(hours)h" : "\(hours)h \(minutes)m"
+        } else if minutes > 0 {
+            return seconds == 0 ? "\(minutes)m" : "\(minutes)m \(seconds)s"
+        } else {
+            return "\(seconds)s"
         }
-
-        return "\(minutes)m"
     }
 }
 
