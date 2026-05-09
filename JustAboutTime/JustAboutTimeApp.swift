@@ -59,8 +59,14 @@ private struct StatusBarLabelView: View {
     let presentation: TimerStatusPresentation
     let countdownProgress: CountdownProgressPresentation?
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
-        Image(nsImage: StatusBarLabelImageRenderer.image(presentation: presentation, countdownProgress: countdownProgress))
+        Image(nsImage: StatusBarLabelImageRenderer.image(
+            presentation: presentation,
+            countdownProgress: countdownProgress,
+            colorScheme: colorScheme
+        ))
             .accessibilityLabel(presentation.text)
     }
 }
@@ -76,15 +82,19 @@ private enum StatusBarLabelImageRenderer {
 
     static func image(
         presentation: TimerStatusPresentation,
-        countdownProgress: CountdownProgressPresentation?
+        countdownProgress: CountdownProgressPresentation?,
+        colorScheme: ColorScheme
     ) -> NSImage {
-        let attributes = textAttributes()
+        let needsOriginalColor = usesSemanticRed(presentation: presentation, countdownProgress: countdownProgress)
+        let primaryColor = needsOriginalColor ? menuBarPrimaryColor(for: colorScheme) : .labelColor
+        let attributes = textAttributes(foregroundColor: primaryColor)
         let textSize = presentation.text.size(withAttributes: attributes)
         let textRowSize = rowSize(textSize: textSize)
         let progressHeight = countdownProgress == nil ? 0 : Layout.progressSpacing + Layout.progressHeight
         let progressWidth = max(34, textRowSize.width)
         let imageSize = NSSize(width: max(textRowSize.width, progressWidth), height: textRowSize.height + progressHeight)
         let image = NSImage(size: imageSize)
+        image.isTemplate = !needsOriginalColor
 
         image.lockFocus()
         defer { image.unlockFocus() }
@@ -96,7 +106,7 @@ private enum StatusBarLabelImageRenderer {
 
         drawDot(
             isVisible: presentation.dotPhase == .leading || isLeadingRed,
-            color: isLeadingRed ? .systemRed : .labelColor,
+            color: isLeadingRed ? .systemRed : primaryColor,
             in: NSRect(
                 x: rowOriginX,
                 y: progressHeight + (textRowSize.height - Layout.dotDiameter) / 2,
@@ -109,7 +119,7 @@ private enum StatusBarLabelImageRenderer {
 
         drawDot(
             isVisible: presentation.dotPhase == .trailing || isTrailingRed,
-            color: isTrailingRed ? .systemRed : .labelColor,
+            color: isTrailingRed ? .systemRed : primaryColor,
             in: NSRect(
                 x: textOrigin.x + textSize.width + Layout.dotSpacing,
                 y: progressHeight + (textRowSize.height - Layout.dotDiameter) / 2,
@@ -121,6 +131,7 @@ private enum StatusBarLabelImageRenderer {
         if let countdownProgress {
             drawProgress(
                 countdownProgress,
+                primaryColor: primaryColor,
                 in: NSRect(x: 0, y: 0, width: progressWidth, height: Layout.progressHeight)
             )
         }
@@ -135,10 +146,23 @@ private enum StatusBarLabelImageRenderer {
         )
     }
 
-    private static func textAttributes() -> [NSAttributedString.Key: Any] {
+    private static func usesSemanticRed(
+        presentation: TimerStatusPresentation,
+        countdownProgress: CountdownProgressPresentation?
+    ) -> Bool {
+        presentation.dotPhase == .leadingRed ||
+            presentation.dotPhase == .trailingRed ||
+            countdownProgress?.isWarning == true
+    }
+
+    private static func menuBarPrimaryColor(for colorScheme: ColorScheme) -> NSColor {
+        colorScheme == .dark ? .white : .black
+    }
+
+    private static func textAttributes(foregroundColor: NSColor) -> [NSAttributedString.Key: Any] {
         [
             .font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular),
-            .foregroundColor: NSColor.labelColor
+            .foregroundColor: foregroundColor
         ]
     }
 
@@ -151,9 +175,9 @@ private enum StatusBarLabelImageRenderer {
         NSBezierPath(ovalIn: rect).fill()
     }
 
-    private static func drawProgress(_ progress: CountdownProgressPresentation, in rect: NSRect) {
+    private static func drawProgress(_ progress: CountdownProgressPresentation, primaryColor: NSColor, in rect: NSRect) {
         let outlineRect = rect.insetBy(dx: 0.5, dy: 0.5)
-        let progressColor = progress.isWarning ? NSColor.systemRed : NSColor.labelColor
+        let progressColor = progress.isWarning ? NSColor.systemRed : primaryColor
         let outlinePath = NSBezierPath(
             roundedRect: outlineRect,
             xRadius: outlineRect.height / 2,

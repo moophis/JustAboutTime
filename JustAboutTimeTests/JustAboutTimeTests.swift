@@ -247,12 +247,21 @@ struct JustAboutTimeTests {
         #expect(menuSource.contains("StableTimerStatusView(timerStore: timerStore)"))
     }
 
-    @Test func statusBarLabelKeepsFixedDotSlots() throws {
+    @Test func statusBarLabelKeepsFixedDotSlotsAndTemplateTintWhenPossible() throws {
         let appSource = try source(at: projectFilePath("JustAboutTime/JustAboutTimeApp.swift"))
 
         #expect(appSource.contains("Image(nsImage: StatusBarLabelImageRenderer.image"))
+        #expect(appSource.contains("@Environment(\\.colorScheme) private var colorScheme"))
+        #expect(appSource.contains("colorScheme: colorScheme"))
+        #expect(appSource.contains("image.isTemplate = !needsOriginalColor"))
+        #expect(appSource.contains("let primaryColor = needsOriginalColor ? menuBarPrimaryColor(for: colorScheme) : .labelColor"))
+        #expect(appSource.contains("private static func menuBarPrimaryColor(for colorScheme: ColorScheme) -> NSColor"))
+        #expect(appSource.contains("colorScheme == .dark ? .white : .black"))
         #expect(appSource.contains("presentation.dotPhase == .leading"))
         #expect(appSource.contains("presentation.dotPhase == .trailing"))
+        #expect(appSource.contains("presentation.dotPhase == .leadingRed"))
+        #expect(appSource.contains("presentation.dotPhase == .trailingRed"))
+        #expect(appSource.contains("progress.isWarning ? NSColor.systemRed : primaryColor"))
         #expect(appSource.contains("drawProgress("))
     }
 
