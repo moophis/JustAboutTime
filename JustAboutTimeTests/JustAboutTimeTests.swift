@@ -273,13 +273,15 @@ struct JustAboutTimeTests {
         #expect(projectSource.contains("ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon"))
     }
 
-    @Test func preferencesViewIncludesPresetShortcutAndNotificationSections() throws {
+    @Test func preferencesViewIncludesGroupedPresetShortcutAndNotificationSections() throws {
         let source = try source(at: projectFilePath("JustAboutTime/PreferencesView.swift"))
 
-        #expect(source.contains("Section(\"Countdown Presets\")"))
+        #expect(source.contains("PreferencesGroup(title: \"COUNTDOWN\")"))
+        #expect(source.contains("PreferencesGroup(title: \"SHORTCUTS\")"))
         #expect(source.contains("KeyboardShortcuts.Recorder(for: name)"))
         #expect(source.contains("Conflicting or invalid shortcuts are rejected automatically."))
-        #expect(source.contains("Section(\"Notifications\")"))
+        #expect(source.contains("PreferencesGroup(title: \"NOTIFICATIONS\")"))
+        #expect(source.contains("Divider()"))
         #expect(source.contains("@Environment(\\.scenePhase) private var scenePhase"))
         #expect(source.contains(".task(id: scenePhase)"))
         #expect(source.contains("if let settingsURL = URL("))

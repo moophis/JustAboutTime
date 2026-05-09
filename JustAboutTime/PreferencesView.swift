@@ -9,56 +9,63 @@ struct PreferencesView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        Form {
-            Section("Countdown Presets") {
-                ForEach(Array(preferencesStore.presetDurations.enumerated()), id: \.offset) { index, _ in
-                    PresetDurationRow(
-                        title: "Preset \(index + 1)",
-                        durationInMinutes: durationBinding(for: index)
-                    )
-                }
-            }
-
-            Section("Global Shortcuts") {
-                ForEach(preferencesStore.shortcutNames, id: \.rawValue) { name in
-                    HStack {
-                        Text(AppShortcuts.title(for: name))
-                        Spacer()
-                        KeyboardShortcuts.Recorder(for: name)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
+                PreferencesGroup(title: "COUNTDOWN") {
+                    ForEach(Array(preferencesStore.presetDurations.enumerated()), id: \.offset) { index, _ in
+                        PresetDurationRow(
+                            title: "Preset \(index + 1)",
+                            durationInMinutes: durationBinding(for: index)
+                        )
                     }
                 }
 
-                Text("Conflicting or invalid shortcuts are rejected automatically.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+                PreferencesGroup(title: "SHORTCUTS") {
+                    ForEach(preferencesStore.shortcutNames, id: \.rawValue) { name in
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(AppShortcuts.title(for: name))
+                                .font(.body.weight(.semibold))
+                            Spacer()
+                            KeyboardShortcuts.Recorder(for: name)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
 
-            Section("Notifications") {
-                HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Alerts")
-                        Text(notificationManager.preferencesDetailText)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    Text("Conflicting or invalid shortcuts are rejected automatically.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
-                        if let errorText = notificationManager.preferencesErrorText {
-                            Text(errorText)
+                PreferencesGroup(title: "NOTIFICATIONS") {
+                    HStack(alignment: .top, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Alerts")
+                                .font(.body.weight(.semibold))
+                            Text(notificationManager.preferencesDetailText)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+
+                            if let errorText = notificationManager.preferencesErrorText {
+                                Text(errorText)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        Spacer()
+
+                        Button(notificationManager.preferencesActionTitle) {
+                            performNotificationAction()
                         }
                     }
-
-                    Spacer()
-
-                    Button(notificationManager.preferencesActionTitle) {
-                        performNotificationAction()
-                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 48)
+            .padding(.vertical, 32)
         }
-        .formStyle(.grouped)
-        .padding(20)
-        .frame(minWidth: 420, minHeight: 320)
+        .frame(minWidth: 520, minHeight: 420)
         .task(id: scenePhase) {
             guard scenePhase == .active else {
                 return
@@ -98,13 +105,41 @@ struct PreferencesView: View {
     }
 }
 
+private struct PreferencesGroup<Content: View>: View {
+    let title: String
+    let content: Content
+
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 16) {
+                content
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Divider()
+                .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 private struct PresetDurationRow: View {
     let title: String
     @Binding var durationInMinutes: Int
 
     var body: some View {
-        HStack {
+        HStack(alignment: .firstTextBaseline) {
             Text(title)
+                .font(.body.weight(.semibold))
             Spacer()
             TextField("Minutes", value: $durationInMinutes, format: .number)
                 .multilineTextAlignment(.trailing)
@@ -115,6 +150,7 @@ private struct PresetDurationRow: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 70, alignment: .trailing)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var durationLabel: String {
