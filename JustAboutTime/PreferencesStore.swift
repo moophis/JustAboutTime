@@ -16,6 +16,7 @@ final class PreferencesStore: ObservableObject {
         static let openOnRestartKey = "openOnRestart"
         static let pauseOnScreenLockedKey = "pauseOnScreenLocked"
         static let resumeOnReloginKey = "resumeOnRelogin"
+        static let countUpAfterCountdownKey = "countUpAfterCountdown"
     }
 
     private let userDefaults: UserDefaults
@@ -39,6 +40,9 @@ final class PreferencesStore: ObservableObject {
     @Published var resumeOnRelogin: Bool {
         didSet { userDefaults.set(resumeOnRelogin, forKey: Storage.resumeOnReloginKey) }
     }
+    @Published var countUpAfterCountdown: Bool {
+        didSet { userDefaults.set(countUpAfterCountdown, forKey: Storage.countUpAfterCountdownKey) }
+    }
     let shortcutNames: [KeyboardShortcuts.Name]
 
     init(userDefaults: UserDefaults = .standard) {
@@ -48,6 +52,7 @@ final class PreferencesStore: ObservableObject {
         openOnRestart = userDefaults.bool(forKey: Storage.openOnRestartKey)
         pauseOnScreenLocked = userDefaults.bool(forKey: Storage.pauseOnScreenLockedKey)
         resumeOnRelogin = userDefaults.bool(forKey: Storage.resumeOnReloginKey)
+        countUpAfterCountdown = userDefaults.bool(forKey: Storage.countUpAfterCountdownKey)
         shortcutNames = AppShortcuts.allNames
         persistPresetDurations(presetDurations)
     }

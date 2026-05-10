@@ -3,7 +3,7 @@ import Foundation
 enum TimerStatusSnapshot: Equatable {
     case idle
     case countdown(remaining: TimeInterval, isRunning: Bool, isWarning: Bool)
-    case countUp(elapsed: TimeInterval, isRunning: Bool)
+    case countUp(elapsed: TimeInterval, isRunning: Bool, isOverdue: Bool)
     case countdownCompleted
 }
 
@@ -30,8 +30,11 @@ struct StatusBarPresenter {
                 text: format(remaining),
                 dotPhase: countdownDotPhase(isRunning: isRunning, isWarning: isWarning, animationStep: animationStep)
             )
-        case let .countUp(elapsed, isRunning):
-            return TimerStatusPresentation(text: format(elapsed), dotPhase: dotPhase(isRunning: isRunning, animationStep: animationStep))
+        case let .countUp(elapsed, isRunning, isOverdue):
+            return TimerStatusPresentation(
+                text: format(elapsed),
+                dotPhase: countUpDotPhase(isRunning: isRunning, isOverdue: isOverdue, animationStep: animationStep)
+            )
         case .countdownCompleted:
             return TimerStatusPresentation(text: "00:00", dotPhase: redAlternatingDotPhase(animationStep: animationStep))
         }
@@ -55,6 +58,18 @@ struct StatusBarPresenter {
         }
 
         guard isWarning else {
+            return dotPhase(isRunning: isRunning, animationStep: animationStep)
+        }
+
+        return redAlternatingDotPhase(animationStep: animationStep)
+    }
+
+    private func countUpDotPhase(isRunning: Bool, isOverdue: Bool, animationStep: Int) -> DotPhase {
+        guard isRunning else {
+            return .hidden
+        }
+
+        guard isOverdue else {
             return dotPhase(isRunning: isRunning, animationStep: animationStep)
         }
 

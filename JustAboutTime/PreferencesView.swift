@@ -52,7 +52,11 @@ private struct GeneralPreferencesView: View {
 
                 Toggle("Resume on unlock", isOn: $preferencesStore.resumeOnRelogin)
                     .font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .disabled(!preferencesStore.pauseOnScreenLocked)
+
+                Toggle("Count up when countdown ends", isOn: $preferencesStore.countUpAfterCountdown)
+                    .font(.body.weight(.semibold))
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }

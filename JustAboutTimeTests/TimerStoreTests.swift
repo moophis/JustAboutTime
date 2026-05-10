@@ -31,7 +31,7 @@ struct TimerStoreTests {
         let presenter = StatusBarPresenter()
 
         let presentation = presenter.presentation(
-            for: .countUp(elapsed: 45, isRunning: false),
+            for: .countUp(elapsed: 45, isRunning: false, isOverdue: false),
             animationStep: 1
         )
 
@@ -42,10 +42,10 @@ struct TimerStoreTests {
     @Test func statusBarPresenterOnlyAnimatesDotsWhileRunning() {
         let presenter = StatusBarPresenter()
 
-        let runningA = presenter.presentation(for: .countUp(elapsed: 10, isRunning: true), animationStep: 0)
-        let runningB = presenter.presentation(for: .countUp(elapsed: 10, isRunning: true), animationStep: 1)
-        let pausedA = presenter.presentation(for: .countUp(elapsed: 10, isRunning: false), animationStep: 0)
-        let pausedB = presenter.presentation(for: .countUp(elapsed: 10, isRunning: false), animationStep: 1)
+        let runningA = presenter.presentation(for: .countUp(elapsed: 10, isRunning: true, isOverdue: false), animationStep: 0)
+        let runningB = presenter.presentation(for: .countUp(elapsed: 10, isRunning: true, isOverdue: false), animationStep: 1)
+        let pausedA = presenter.presentation(for: .countUp(elapsed: 10, isRunning: false, isOverdue: false), animationStep: 0)
+        let pausedB = presenter.presentation(for: .countUp(elapsed: 10, isRunning: false, isOverdue: false), animationStep: 1)
         let idleA = presenter.presentation(for: .idle, animationStep: 0)
         let idleB = presenter.presentation(for: .idle, animationStep: 1)
 
@@ -88,6 +88,20 @@ struct TimerStoreTests {
         #expect(leading.dotPhase == .leadingRed)
         #expect(trailing.text == "00:00")
         #expect(trailing.dotPhase == .trailingRed)
+    }
+
+    @Test func statusBarPresenterAlternatesOverdueCountUpDotsInRed() {
+        let presenter = StatusBarPresenter()
+
+        let leading = presenter.presentation(for: .countUp(elapsed: 2, isRunning: true, isOverdue: true), animationStep: 0)
+        let trailing = presenter.presentation(for: .countUp(elapsed: 3, isRunning: true, isOverdue: true), animationStep: 1)
+        let paused = presenter.presentation(for: .countUp(elapsed: 4, isRunning: false, isOverdue: true), animationStep: 2)
+
+        #expect(leading.text == "00:02")
+        #expect(leading.dotPhase == .leadingRed)
+        #expect(trailing.text == "00:03")
+        #expect(trailing.dotPhase == .trailingRed)
+        #expect(paused.dotPhase == .hidden)
     }
 
     @MainActor
@@ -305,6 +319,46 @@ struct TimerStoreTests {
         #expect(store.countdownProgress == CountdownProgressPresentation(fractionComplete: 1, isWarning: true))
         #expect([DotPhase.leadingRed, .trailingRed].contains(store.statusPresentation.dotPhase))
         #expect(store.statusPresentation.dotPhase != completedDotPhase)
+    }
+
+    @MainActor
+    @Test func completedCountdownCountsUpWhenPreferenceIsEnabled() async throws {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let sleeper = TestSleeper()
+        let preferencesStore = PreferencesStore(userDefaults: makeUserDefaults())
+        preferencesStore.countUpAfterCountdown = true
+        let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
+            preferencesStore: preferencesStore,
+            now: { clock.now },
+            sleep: sleeper.sleep(for:)
+        )
+
+        store.startCountdown(duration: 1)
+        clock.advance(by: 2)
+        await sleeper.resumeOnce()
+
+        while store.latestEvent == nil {
+            await Task.yield()
+        }
+
+        #expect(store.latestEvent == .countdownCompleted)
+        #expect(store.activeSession?.mode == .countUp)
+        #expect(store.statusPresentation.text == "00:02")
+        #expect([DotPhase.leadingRed, .trailingRed].contains(store.statusPresentation.dotPhase))
+        #expect(store.countdownProgress == CountdownProgressPresentation(fractionComplete: 1, isWarning: true))
+        let overdueDotPhase = store.statusPresentation.dotPhase
+
+        clock.advance(by: 1)
+        await sleeper.resumeOnce()
+        while store.statusPresentation.text != "00:03" {
+            await Task.yield()
+        }
+
+        #expect(store.activeSession?.mode == .countUp)
+        #expect([DotPhase.leadingRed, .trailingRed].contains(store.statusPresentation.dotPhase))
+        #expect(store.statusPresentation.dotPhase != overdueDotPhase)
+        #expect(store.countdownProgress == CountdownProgressPresentation(fractionComplete: 1, isWarning: true))
     }
 
     @MainActor

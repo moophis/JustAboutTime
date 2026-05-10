@@ -35,6 +35,7 @@ final class TimerStore: ObservableObject {
     private var currentTickTaskGeneration: Int?
     private var tickTask: Task<Void, Never>?
     private var lastCompletedCountdownDuration: TimeInterval?
+    private var isCountingUpAfterCountdown = false
 
     private(set) var wasSystemPaused = false
 
@@ -92,6 +93,7 @@ final class TimerStore: ObservableObject {
 
     func startCountdown(duration: TimeInterval) {
         wasSystemPaused = false
+        isCountingUpAfterCountdown = false
         let currentTime = now()
         repeatableStartMode = .countdown(duration: duration)
         preferencesStore.setLastTimerType(.countdown(duration: duration))
@@ -100,6 +102,7 @@ final class TimerStore: ObservableObject {
 
     func startCountUp() {
         wasSystemPaused = false
+        isCountingUpAfterCountdown = false
         let currentTime = now()
         repeatableStartMode = .countUp
         preferencesStore.setLastTimerType(.countUp)
@@ -147,6 +150,7 @@ final class TimerStore: ObservableObject {
 
     func finish() {
         wasSystemPaused = false
+        isCountingUpAfterCountdown = false
         let currentTime = now()
         send(.finish(now: currentTime), referenceTime: currentTime)
     }
@@ -167,12 +171,34 @@ final class TimerStore: ObservableObject {
     private func send(_ action: TimerStateMachine.Action, referenceTime: Date) {
         let previousSession = stateMachine.session
         let events = stateMachine.send(action)
-        if events.contains(.countdownCompleted) {
-            lastCompletedCountdownDuration = previousSession?.originalDuration
-        }
+        handleCountdownCompletion(previousSession: previousSession, events: events, referenceTime: referenceTime)
         persistHistoryIfNeeded(previousSession: previousSession, events: events, completedAt: referenceTime)
         notifyIfNeeded(previousSession: previousSession, events: events)
         synchronizePresentation(referenceTime: referenceTime, events: events)
+    }
+
+    private func handleCountdownCompletion(
+        previousSession: TimerSession?,
+        events: [TimerStateMachine.Event],
+        referenceTime: Date
+    ) {
+        guard events.contains(.countdownCompleted) else {
+            return
+        }
+
+        lastCompletedCountdownDuration = previousSession?.originalDuration
+        guard preferencesStore.countUpAfterCountdown else {
+            return
+        }
+
+        let countUpStartTime: Date
+        if case let .runningCountdown(targetDate) = previousSession?.phase {
+            countUpStartTime = targetDate
+        } else {
+            countUpStartTime = referenceTime
+        }
+        stateMachine.send(.startCountUp(now: countUpStartTime))
+        isCountingUpAfterCountdown = true
     }
 
     private func notifyIfNeeded(previousSession: TimerSession?, events: [TimerStateMachine.Event]) {
@@ -232,6 +258,10 @@ final class TimerStore: ObservableObject {
     }
 
     private func countdownProgress(for session: TimerSession?, referenceTime: Date) -> CountdownProgressPresentation? {
+        if session != nil, isCountingUpAfterCountdown, lastCompletedCountdownDuration != nil {
+            return CountdownProgressPresentation(fractionComplete: 1.0, isWarning: true)
+        }
+
         if session == nil, latestEvent == .countdownCompleted, let duration = lastCompletedCountdownDuration, duration > 0 {
             return CountdownProgressPresentation(fractionComplete: 1.0, isWarning: true)
         }
@@ -267,7 +297,8 @@ final class TimerStore: ObservableObject {
             case .runningCountUp, .pausedCountUp:
                 return .countUp(
                     elapsed: session.elapsedTime(at: referenceTime),
-                    isRunning: session.isRunning
+                    isRunning: session.isRunning,
+                    isOverdue: isCountingUpAfterCountdown
                 )
             }
         }
@@ -323,9 +354,7 @@ final class TimerStore: ObservableObject {
             animationStep += 1
             let previousSession = stateMachine.session
             let events = stateMachine.send(.tick(now: currentTime))
-            if events.contains(.countdownCompleted) {
-                lastCompletedCountdownDuration = previousSession?.originalDuration
-            }
+            handleCountdownCompletion(previousSession: previousSession, events: events, referenceTime: currentTime)
             persistHistoryIfNeeded(previousSession: previousSession, events: events, completedAt: currentTime)
             notifyIfNeeded(previousSession: previousSession, events: events)
             synchronizePresentation(referenceTime: currentTime, events: events)
