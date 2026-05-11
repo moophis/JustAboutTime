@@ -8,6 +8,7 @@ struct JustAboutTimeApp: App {
     @StateObject private var preferencesStore = PreferencesStore()
     @StateObject private var timerStore: TimerStore
     @StateObject private var shortcutManager: ShortcutManager
+    @StateObject private var updateManager = UpdateManager()
 
     init() {
         let historyStore = HistoryStore()
@@ -20,8 +21,10 @@ struct JustAboutTimeApp: App {
         _timerStore = StateObject(wrappedValue: timerStore)
         _shortcutManager = StateObject(wrappedValue: ShortcutManager(timerStore: timerStore))
 
-        Task { @MainActor [timerStore, preferencesStore] in
+        Task { @MainActor [timerStore, preferencesStore, updateManager] in
             Self.setupSystemObservers(timerStore: timerStore, preferencesStore: preferencesStore)
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            updateManager.checkForUpdatesIfNeeded()
         }
     }
 
@@ -77,6 +80,7 @@ struct JustAboutTimeApp: App {
 
         Window("About JustAboutTime", id: AboutWindow.id) {
             AboutView()
+                .environmentObject(updateManager)
         }
         .windowResizability(.contentSize)
 
