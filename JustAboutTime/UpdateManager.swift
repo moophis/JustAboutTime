@@ -383,3 +383,11 @@ private struct GitHubAsset: Decodable {
         case browserDownloadURL = "browser_download_url"
     }
 }
+
+#if DEBUG
+extension UpdateManager {
+    func debugSimulateStatus(_ status: Status) {
+        self.status = status
+    }
+}
+#endif
