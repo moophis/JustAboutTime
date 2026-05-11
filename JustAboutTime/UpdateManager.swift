@@ -113,9 +113,6 @@ final class UpdateManager: ObservableObject {
 
         guard isVersion(latestVersion, newerThan: currentVersion) else {
             status = .upToDate
-            if !silent {
-                showAlert(message: "JustAboutTime is up to date.")
-            }
             return
         }
 
@@ -254,13 +251,22 @@ final class UpdateManager: ObservableObject {
         let fileHandle = try FileHandle(forWritingTo: destination)
         defer { try? fileHandle.close() }
         var receivedBytes = 0
+        var buffer = [UInt8]()
+        buffer.reserveCapacity(65536)
 
-        for try await chunk in bytes {
-            try fileHandle.write(contentsOf: chunk)
-            receivedBytes += chunk.count
+        for try await byte in bytes {
+            buffer.append(byte)
+            receivedBytes += 1
+            if buffer.count >= 65536 {
+                try fileHandle.write(contentsOf: buffer)
+                buffer.removeAll(keepingCapacity: true)
+            }
             if expectedLength > 0 {
                 await progressHandler(Double(receivedBytes) / expectedLength)
             }
+        }
+        if !buffer.isEmpty {
+            try fileHandle.write(contentsOf: buffer)
         }
         return destination
     }
