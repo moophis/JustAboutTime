@@ -160,6 +160,9 @@ final class UpdateManager: ObservableObject {
             status = .downloadFailed("Failed to create temporary directory.")
             return
         }
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+        }
 
         let dmgURL: URL
         do {
@@ -173,7 +176,7 @@ final class UpdateManager: ObservableObject {
             return
         }
 
-        guard let mountPoint = mountDMG(at: dmgURL) else {
+        guard let mountPoint = await mountDMG(at: dmgURL) else {
             status = .downloadFailed("Failed to mount disk image.")
             return
         }
@@ -183,7 +186,7 @@ final class UpdateManager: ObservableObject {
         let targetAppPath = Bundle.main.bundlePath
 
         guard FileManager.default.fileExists(atPath: mountedAppPath) else {
-            ejectDMG(at: mountPoint)
+            await ejectDMG(at: mountPoint)
             status = .downloadFailed("App not found in disk image.")
             return
         }
@@ -192,6 +195,7 @@ final class UpdateManager: ObservableObject {
 
         let script = """
         #!/bin/bash
+        set -euo pipefail
         sleep 2
         rsync -a --delete "\(mountedAppPath)/" "\(targetAppPath)/"
         hdiutil detach "\(mountPoint)" -force 2>/dev/null
@@ -202,7 +206,7 @@ final class UpdateManager: ObservableObject {
         do {
             try script.write(to: scriptPath, atomically: true, encoding: .utf8)
         } catch {
-            ejectDMG(at: mountPoint)
+            await ejectDMG(at: mountPoint)
             status = .downloadFailed("Failed to prepare installer.")
             return
         }
@@ -213,7 +217,7 @@ final class UpdateManager: ObservableObject {
                 ofItemAtPath: scriptPath.path
             )
         } catch {
-            ejectDMG(at: mountPoint)
+            await ejectDMG(at: mountPoint)
             status = .downloadFailed("Failed to prepare installer.")
             return
         }
@@ -228,7 +232,7 @@ final class UpdateManager: ObservableObject {
         do {
             try process.run()
         } catch {
-            ejectDMG(at: mountPoint)
+            await ejectDMG(at: mountPoint)
             status = .downloadFailed("Failed to start installer.")
             return
         }
@@ -248,6 +252,7 @@ final class UpdateManager: ObservableObject {
         let (bytes, response) = try await session.bytes(from: url)
         let expectedLength = Double(response.expectedContentLength)
         let fileHandle = try FileHandle(forWritingTo: destination)
+        defer { try? fileHandle.close() }
         var receivedBytes = 0
 
         for try await chunk in bytes {
@@ -257,51 +262,54 @@ final class UpdateManager: ObservableObject {
                 await progressHandler(Double(receivedBytes) / expectedLength)
             }
         }
-        try fileHandle.close()
         return destination
     }
 
-    private func mountDMG(at url: URL) -> String? {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
-        process.arguments = ["attach", url.path, "-nobrowse", "-plist"]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
+    private func mountDMG(at url: URL) async -> String? {
+        await Task.detached {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
+            process.arguments = ["attach", url.path, "-nobrowse", "-plist"]
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = FileHandle.nullDevice
 
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            return nil
-        }
-
-        guard process.terminationStatus == 0,
-              let data = try? pipe.fileHandleForReading.readToEnd(),
-              let plist = try? PropertyListSerialization.propertyList(
-                  from: data, options: [], format: nil
-              ) as? [String: Any],
-              let entities = plist["system-entities"] as? [[String: Any]]
-        else {
-            return nil
-        }
-
-        for entity in entities {
-            if let mountPoint = entity["mount-point"] as? String {
-                return mountPoint
+            do {
+                try process.run()
+                process.waitUntilExit()
+            } catch {
+                return nil
             }
-        }
-        return nil
+
+            guard process.terminationStatus == 0,
+                  let data = try? pipe.fileHandleForReading.readToEnd(),
+                  let plist = try? PropertyListSerialization.propertyList(
+                      from: data, options: [], format: nil
+                  ) as? [String: Any],
+                  let entities = plist["system-entities"] as? [[String: Any]]
+            else {
+                return nil
+            }
+
+            for entity in entities {
+                if let mountPoint = entity["mount-point"] as? String {
+                    return mountPoint
+                }
+            }
+            return nil
+        }.value
     }
 
-    private func ejectDMG(at mountPoint: String) {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
-        process.arguments = ["detach", mountPoint, "-force"]
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
-        try? process.run()
-        process.waitUntilExit()
+    private func ejectDMG(at mountPoint: String) async {
+        await Task.detached {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
+            process.arguments = ["detach", mountPoint, "-force"]
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
+            try? process.run()
+            process.waitUntilExit()
+        }.value
     }
 
     private func showAlert(message: String) {
