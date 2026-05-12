@@ -35,7 +35,7 @@ final class UpdateManager: ObservableObject {
     private var currentVersion: String {
         Bundle.main
             .object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-            ?? "1.0.1"
+            ?? "1.0.3"
     }
 
     // MARK: - Public API
