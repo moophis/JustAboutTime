@@ -145,6 +145,12 @@ final class TimerStore: ObservableObject {
             return
         }
 
+        if isCountingUpAfterCountdown, let duration = lastCompletedCountdownDuration {
+            send(.finish(now: currentTime), referenceTime: currentTime)
+            startCountdown(duration: duration)
+            return
+        }
+
         send(.restart(now: currentTime), referenceTime: currentTime)
     }
 

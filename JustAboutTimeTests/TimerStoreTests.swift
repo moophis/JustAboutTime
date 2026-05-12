@@ -362,6 +362,37 @@ struct TimerStoreTests {
     }
 
     @MainActor
+    @Test func restartAfterCountdownCountsUpRestartsOriginalCountdown() async throws {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let sleeper = TestSleeper()
+        let preferencesStore = PreferencesStore(userDefaults: makeUserDefaults())
+        preferencesStore.countUpAfterCountdown = true
+        let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
+            preferencesStore: preferencesStore,
+            now: { clock.now },
+            sleep: sleeper.sleep(for:)
+        )
+
+        store.startCountdown(duration: 90)
+        clock.advance(by: 95)
+        await sleeper.resumeOnce()
+
+        while store.latestEvent == nil {
+            await Task.yield()
+        }
+
+        #expect(store.activeSession?.mode == .countUp)
+
+        store.restart()
+
+        #expect(store.activeSession?.mode == .countdown(duration: 90))
+        #expect(store.statusPresentation.text == "01:30")
+        #expect(store.activeSession?.phase.isRunning == true)
+        #expect(store.countdownProgress == CountdownProgressPresentation(fractionComplete: 1.0, isWarning: false))
+    }
+
+    @MainActor
     @Test func shortcutManagerRegistersGlobalHandlersAndRoutesActions() {
         let registry = TestShortcutRegistry()
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
