@@ -130,7 +130,8 @@ private enum StatusBarLabelImageRenderer {
     ) -> NSImage {
         let needsOriginalColor = usesSemanticRed(presentation: presentation, countdownProgress: countdownProgress)
         let primaryColor = needsOriginalColor ? menuBarPrimaryColor(for: colorScheme) : .labelColor
-        let attributes = textAttributes(foregroundColor: primaryColor)
+        let textColor = countdownProgress?.isBlinking == true ? NSColor.systemRed : primaryColor
+        let attributes = textAttributes(foregroundColor: textColor)
         let textSize = presentation.text.size(withAttributes: attributes)
         let textRowSize = rowSize(textSize: textSize)
         let progressHeight = countdownProgress == nil ? 0 : Layout.progressSpacing + Layout.progressHeight
@@ -195,7 +196,8 @@ private enum StatusBarLabelImageRenderer {
     ) -> Bool {
         presentation.dotPhase == .leadingRed ||
             presentation.dotPhase == .trailingRed ||
-            countdownProgress?.isWarning == true
+            countdownProgress?.isWarning == true ||
+            countdownProgress?.isBlinking == true
     }
 
     private static func menuBarPrimaryColor(for colorScheme: ColorScheme) -> NSColor {
@@ -230,6 +232,10 @@ private enum StatusBarLabelImageRenderer {
         progressColor.setStroke()
         outlinePath.lineWidth = 1
         outlinePath.stroke()
+
+        guard progress.isFillVisible else {
+            return
+        }
 
         let fillRect = outlineRect.insetBy(dx: Layout.progressInset, dy: Layout.progressInset)
         let fillWidth = fillRect.width * min(1, max(0, progress.fractionComplete))

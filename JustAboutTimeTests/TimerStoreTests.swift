@@ -153,6 +153,8 @@ struct TimerStoreTests {
         clock.advance(by: 40)
         store.pause()
         #expect(store.countdownProgress == CountdownProgressPresentation(fractionComplete: 0.1, isWarning: true))
+        #expect(store.countdownProgress?.isBlinking == false)
+        #expect(store.countdownProgress?.isFillVisible == true)
 
         store.finish()
         #expect(store.countdownProgress == nil)
@@ -305,8 +307,13 @@ struct TimerStoreTests {
         #expect(store.latestEvent == .countdownCompleted)
         #expect(store.activeSession == nil)
         #expect(store.statusPresentation.text == "00:00")
-        #expect(store.countdownProgress == CountdownProgressPresentation(fractionComplete: 1, isWarning: true))
+        let completedProgress = try #require(store.countdownProgress)
+        #expect(completedProgress.fractionComplete == 1)
+        #expect(completedProgress.isWarning)
+        #expect(completedProgress.isBlinking)
+        #expect(completedProgress.isFillVisible == (store.statusPresentation.dotPhase == .leadingRed))
         let completedDotPhase = store.statusPresentation.dotPhase
+        let completedFillVisible = completedProgress.isFillVisible
         #expect([DotPhase.leadingRed, .trailingRed].contains(completedDotPhase))
 
         clock.advance(by: 1)
@@ -316,7 +323,12 @@ struct TimerStoreTests {
         }
 
         #expect(store.statusPresentation.text == "00:00")
-        #expect(store.countdownProgress == CountdownProgressPresentation(fractionComplete: 1, isWarning: true))
+        let nextCompletedProgress = try #require(store.countdownProgress)
+        #expect(nextCompletedProgress.fractionComplete == 1)
+        #expect(nextCompletedProgress.isWarning)
+        #expect(nextCompletedProgress.isBlinking)
+        #expect(nextCompletedProgress.isFillVisible == (store.statusPresentation.dotPhase == .leadingRed))
+        #expect(nextCompletedProgress.isFillVisible != completedFillVisible)
         #expect([DotPhase.leadingRed, .trailingRed].contains(store.statusPresentation.dotPhase))
         #expect(store.statusPresentation.dotPhase != completedDotPhase)
     }
@@ -346,8 +358,13 @@ struct TimerStoreTests {
         #expect(store.activeSession?.mode == .countUp)
         #expect(store.statusPresentation.text == "00:02")
         #expect([DotPhase.leadingRed, .trailingRed].contains(store.statusPresentation.dotPhase))
-        #expect(store.countdownProgress == CountdownProgressPresentation(fractionComplete: 1, isWarning: true))
+        let overdueProgress = try #require(store.countdownProgress)
+        #expect(overdueProgress.fractionComplete == 1)
+        #expect(overdueProgress.isWarning)
+        #expect(overdueProgress.isBlinking)
+        #expect(overdueProgress.isFillVisible == (store.statusPresentation.dotPhase == .leadingRed))
         let overdueDotPhase = store.statusPresentation.dotPhase
+        let overdueFillVisible = overdueProgress.isFillVisible
 
         clock.advance(by: 1)
         await sleeper.resumeOnce()
@@ -358,7 +375,12 @@ struct TimerStoreTests {
         #expect(store.activeSession?.mode == .countUp)
         #expect([DotPhase.leadingRed, .trailingRed].contains(store.statusPresentation.dotPhase))
         #expect(store.statusPresentation.dotPhase != overdueDotPhase)
-        #expect(store.countdownProgress == CountdownProgressPresentation(fractionComplete: 1, isWarning: true))
+        let nextOverdueProgress = try #require(store.countdownProgress)
+        #expect(nextOverdueProgress.fractionComplete == 1)
+        #expect(nextOverdueProgress.isWarning)
+        #expect(nextOverdueProgress.isBlinking)
+        #expect(nextOverdueProgress.isFillVisible == (store.statusPresentation.dotPhase == .leadingRed))
+        #expect(nextOverdueProgress.isFillVisible != overdueFillVisible)
     }
 
     @MainActor
