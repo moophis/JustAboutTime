@@ -6,3 +6,4 @@ xcuserdata/
 *.profraw
 build/
 AGENTS.md
+.worktrees/
