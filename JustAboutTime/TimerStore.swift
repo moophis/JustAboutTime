@@ -259,17 +259,21 @@ final class TimerStore: ObservableObject {
         let presentation = presenter.presentation(for: snapshot, animationStep: animationStep)
         statusText = presentation.text
         statusPresentation = presentation
-        countdownProgress = countdownProgress(for: session, referenceTime: referenceTime)
+        countdownProgress = countdownProgress(for: session, referenceTime: referenceTime, animationStep: animationStep)
         updateTickTask(for: session)
     }
 
-    private func countdownProgress(for session: TimerSession?, referenceTime: Date) -> CountdownProgressPresentation? {
+    private func countdownProgress(
+        for session: TimerSession?,
+        referenceTime: Date,
+        animationStep: Int
+    ) -> CountdownProgressPresentation? {
         if session != nil, isCountingUpAfterCountdown, lastCompletedCountdownDuration != nil {
-            return CountdownProgressPresentation(fractionComplete: 1.0, isWarning: true)
+            return dueCountdownProgress(animationStep: animationStep)
         }
 
         if session == nil, latestEvent == .countdownCompleted, let duration = lastCompletedCountdownDuration, duration > 0 {
-            return CountdownProgressPresentation(fractionComplete: 1.0, isWarning: true)
+            return dueCountdownProgress(animationStep: animationStep)
         }
 
         guard let session,
@@ -282,6 +286,15 @@ final class TimerStore: ObservableObject {
         return CountdownProgressPresentation(
             fractionComplete: min(1, max(0, remaining / duration)),
             isWarning: isCountdownWarning(remaining: remaining, duration: duration)
+        )
+    }
+
+    private func dueCountdownProgress(animationStep: Int) -> CountdownProgressPresentation {
+        CountdownProgressPresentation(
+            fractionComplete: 1.0,
+            isWarning: true,
+            isBlinking: true,
+            isFillVisible: animationStep.isMultiple(of: 2)
         )
     }
 
@@ -378,6 +391,20 @@ final class TimerStore: ObservableObject {
 struct CountdownProgressPresentation: Equatable {
     let fractionComplete: Double
     let isWarning: Bool
+    let isBlinking: Bool
+    let isFillVisible: Bool
+
+    init(
+        fractionComplete: Double,
+        isWarning: Bool,
+        isBlinking: Bool = false,
+        isFillVisible: Bool = true
+    ) {
+        self.fractionComplete = fractionComplete
+        self.isWarning = isWarning
+        self.isBlinking = isBlinking
+        self.isFillVisible = isFillVisible
+    }
 }
 
 private extension TimerStore.Event {
