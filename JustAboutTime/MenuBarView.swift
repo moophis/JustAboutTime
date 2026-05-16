@@ -42,9 +42,7 @@ struct MenuBarView: View {
     private var activeMenu: some View {
         pauseButton
 
-        Button("Restart") {
-            timerStore.restart()
-        }
+        restartSection
 
         Button("Finish") {
             timerStore.finish()
@@ -79,6 +77,22 @@ struct MenuBarView: View {
             } else {
                 timerStore.resume()
             }
+        }
+    }
+
+    @ViewBuilder
+    private var restartSection: some View {
+        Text("Restart")
+            .disabled(true)
+
+        ForEach(Array(preferencesStore.presetDurations.enumerated()), id: \.offset) { _, duration in
+            Button(indentedCountdownTitle(for: duration)) {
+                timerStore.startCountdown(duration: duration)
+            }
+        }
+
+        Button("  Count Up") {
+            timerStore.startCountUp()
         }
     }
 
@@ -129,6 +143,10 @@ struct MenuBarView: View {
 
     private func countdownTitle(for duration: TimeInterval) -> String {
         "Start \(formattedDuration(duration)) Countdown"
+    }
+
+    private func indentedCountdownTitle(for duration: TimeInterval) -> String {
+        "  \(formattedDuration(duration)) Countdown"
     }
 
     private func formattedDuration(_ duration: TimeInterval) -> String {
