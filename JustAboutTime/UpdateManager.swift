@@ -248,6 +248,7 @@ final class UpdateManager: ObservableObject {
     ) async throws -> URL {
         let (bytes, response) = try await session.bytes(from: url)
         let expectedLength = Double(response.expectedContentLength)
+        try Data().write(to: destination, options: .atomic)
         let fileHandle = try FileHandle(forWritingTo: destination)
         defer { try? fileHandle.close() }
         var receivedBytes = 0
@@ -260,14 +261,15 @@ final class UpdateManager: ObservableObject {
             if buffer.count >= 65536 {
                 try fileHandle.write(contentsOf: buffer)
                 buffer.removeAll(keepingCapacity: true)
-            }
-            if expectedLength > 0 {
-                await progressHandler(Double(receivedBytes) / expectedLength)
+                if expectedLength > 0 {
+                    await progressHandler(Double(receivedBytes) / expectedLength)
+                }
             }
         }
         if !buffer.isEmpty {
             try fileHandle.write(contentsOf: buffer)
         }
+        await progressHandler(1)
         return destination
     }
 
