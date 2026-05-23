@@ -44,8 +44,10 @@ struct MenuBarView: View {
 
         restartSection
 
-        Button("Finish") {
+        Button {
             timerStore.finish()
+        } label: {
+            Label("Finish", systemImage: "checkmark.circle")
         }
 
         Divider()
@@ -71,12 +73,14 @@ struct MenuBarView: View {
             }
         } ?? false
 
-        return Button(isRunning ? "Pause" : "Resume") {
+        return Button {
             if isRunning {
                 timerStore.pause()
             } else {
                 timerStore.resume()
             }
+        } label: {
+            Label(isRunning ? "Pause" : "Resume", systemImage: isRunning ? "pause.fill" : "play.fill")
         }
     }
 
@@ -110,33 +114,41 @@ struct MenuBarView: View {
     }
 
     private var historyButton: some View {
-        Button("Open History…") {
+        Button {
             activateApp()
             openWindow(id: HistoryWindow.id)
             activateAppOnNextRunLoop()
+        } label: {
+            Label("Open History…", systemImage: "clock.arrow.circlepath")
         }
     }
 
     private var aboutButton: some View {
-        Button("About JustAboutTime") {
+        Button {
             activateApp()
             openWindow(id: AboutWindow.id)
             activateAppOnNextRunLoop()
+        } label: {
+            Label("About JustAboutTime", systemImage: "info.circle")
         }
     }
 
     private var preferencesButton: some View {
-        Button("Preferences…") {
+        Button {
             activateApp()
             openSettings()
             activateAppOnNextRunLoop()
+        } label: {
+            Label("Preferences…", systemImage: "gearshape")
         }
         .keyboardShortcut(",")
     }
 
     private var quitButton: some View {
-        Button("Quit") {
+        Button {
             NSApplication.shared.terminate(nil)
+        } label: {
+            Label("Quit", systemImage: "power")
         }
         .keyboardShortcut("q")
     }

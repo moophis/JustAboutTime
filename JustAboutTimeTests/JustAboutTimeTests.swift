@@ -222,7 +222,7 @@ struct JustAboutTimeTests {
     @Test func menuBarViewKeepsQuitPath() throws {
         let menuSource = try source(at: projectFilePath("JustAboutTime/MenuBarView.swift"))
 
-        #expect(menuSource.contains("Button(\"Quit"))
+        #expect(menuSource.contains("Label(\"Quit\", systemImage: \"power\")"))
         #expect(menuSource.contains("NSApplication.shared.terminate(nil)"))
     }
 
@@ -231,8 +231,9 @@ struct JustAboutTimeTests {
 
         #expect(menuSource.contains("preferencesStore.presetDurations.enumerated()"))
         #expect(menuSource.contains("Button(\"Count Up\")"))
-        #expect(menuSource.contains("Button(\"Open History…\")"))
-        #expect(menuSource.contains("Button(\"Preferences…\")"))
+        #expect(menuSource.contains("Label(\"About JustAboutTime\", systemImage: \"info.circle\")"))
+        #expect(menuSource.contains("Label(\"Open History…\", systemImage: \"clock.arrow.circlepath\")"))
+        #expect(menuSource.contains("Label(\"Preferences…\", systemImage: \"gearshape\")"))
         #expect(menuSource.contains("@Environment(\\.openSettings) private var openSettings"))
         #expect(menuSource.contains("openSettings()"))
     }
@@ -240,9 +241,9 @@ struct JustAboutTimeTests {
     @Test func activeMenuIncludesTimerControlsAndSummary() throws {
         let menuSource = try source(at: projectFilePath("JustAboutTime/MenuBarView.swift"))
 
-        #expect(menuSource.contains("Button(isRunning ? \"Pause\" : \"Resume\")"))
-        #expect(menuSource.contains("Button(\"Restart\")"))
-        #expect(menuSource.contains("Button(\"Finish\")"))
+        #expect(menuSource.contains("Label(isRunning ? \"Pause\" : \"Resume\", systemImage: isRunning ? \"pause.fill\" : \"play.fill\")"))
+        #expect(menuSource.contains("Text(\"Restart\")"))
+        #expect(menuSource.contains("Label(\"Finish\", systemImage: \"checkmark.circle\")"))
         #expect(menuSource.contains("timerInfo"))
         #expect(menuSource.contains("StableTimerStatusView(timerStore: timerStore)"))
     }
