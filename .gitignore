@@ -7,3 +7,4 @@ xcuserdata/
 build/
 AGENTS.md
 .worktrees/
+derived-data/
