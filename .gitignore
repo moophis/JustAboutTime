@@ -5,6 +5,5 @@ xcuserdata/
 *.xcuserstate
 *.profraw
 build/
-AGENTS.md
 .worktrees/
 derived-data/
