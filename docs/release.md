@@ -11,17 +11,16 @@ Use `scripts/release-notarized.sh` to create a Developer ID signed, notarized, s
 
 ## Credentials
 
-Set credentials in the shell before running the release script:
+Store notarization credentials in Keychain once:
 
 ```sh
-export APPLE_ID="you@example.com"
-export APPLE_TEAM_ID="53URGYWCC5"
-export APPLE_APP_PASSWORD="xxxx-xxxx-xxxx-xxxx"
+xcrun notarytool store-credentials "JustAboutTime-notary" \
+  --apple-id "you@example.com" \
+  --team-id "53URGYWCC5" \
+  --password "xxxx-xxxx-xxxx-xxxx"
 ```
 
-Do not commit these values. `APPLE_APP_PASSWORD` is an app-specific password from appleid.apple.com, not the normal Apple ID password.
-
-The script passes `APPLE_APP_PASSWORD` to `xcrun notarytool` as a command argument because this env-var-only flow intentionally avoids a stored keychain profile. Run it only on a trusted local machine; other local users or process monitors may be able to see command arguments while notarization is running.
+Do not commit these values. `APPLE_APP_PASSWORD` is an app-specific password from appleid.apple.com, not the normal Apple ID password. The release script uses the stored `JustAboutTime-notary` keychain profile, so the password is not passed as a command argument during release builds.
 
 ## Build Release
 
@@ -49,5 +48,7 @@ Upload the final DMG from `build/release/` to the GitHub release. Do not upload 
 ```sh
 SCHEME="JustAboutTime" CONFIGURATION="Release" scripts/release-notarized.sh
 ```
+
+Use `NOTARY_PROFILE="profile-name"` if you stored notarization credentials under a different keychain profile. Use `APPLE_TEAM_ID="team-id"` if signing with a different Apple Developer team.
 
 Use `PROJECT_PATH=/path/to/JustAboutTime.xcodeproj` only if running the script from unusual tooling.

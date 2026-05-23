@@ -5,6 +5,8 @@ set -euo pipefail
 APP_NAME="JustAboutTime"
 SCHEME="${SCHEME:-JustAboutTime}"
 CONFIGURATION="${CONFIGURATION:-Release}"
+APPLE_TEAM_ID="${APPLE_TEAM_ID:-53URGYWCC5}"
+NOTARY_PROFILE="${NOTARY_PROFILE:-JustAboutTime-notary}"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_PATH="${PROJECT_PATH:-$ROOT_DIR/JustAboutTime.xcodeproj}"
@@ -50,10 +52,6 @@ set_export_option() {
 
   /usr/libexec/PlistBuddy -c "Add :$key string $value" "$EXPORT_OPTIONS"
 }
-
-require_env APPLE_ID
-require_env APPLE_TEAM_ID
-require_env APPLE_APP_PASSWORD
 
 require_command ditto
 require_command hdiutil
@@ -107,9 +105,7 @@ info "Packaging app for notarization"
 
 info "Submitting notarization request"
 xcrun notarytool submit "$NOTARY_ZIP" \
-  --apple-id "$APPLE_ID" \
-  --team-id "$APPLE_TEAM_ID" \
-  --password "$APPLE_APP_PASSWORD" \
+  --keychain-profile "$NOTARY_PROFILE" \
   --wait
 
 info "Stapling notarization ticket"
@@ -140,9 +136,7 @@ codesign --verify --strict --verbose=4 "$FINAL_DMG"
 
 info "Submitting DMG notarization request"
 xcrun notarytool submit "$FINAL_DMG" \
-  --apple-id "$APPLE_ID" \
-  --team-id "$APPLE_TEAM_ID" \
-  --password "$APPLE_APP_PASSWORD" \
+  --keychain-profile "$NOTARY_PROFILE" \
   --wait
 
 info "Stapling DMG notarization ticket"
