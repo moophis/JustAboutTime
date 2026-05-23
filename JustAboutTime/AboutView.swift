@@ -21,11 +21,14 @@ struct AboutView: View {
             updateSection
                 .font(.callout)
 
+            updatePreferences
+                .font(.caption)
+
             Link("GitHub", destination: githubURL)
                 .font(.callout)
         }
         .padding(24)
-        .frame(width: 260)
+        .frame(width: 300)
     }
 
     @ViewBuilder
@@ -58,41 +61,34 @@ struct AboutView: View {
             }
             .disabled(updateManager.isBusy)
 
-        case .updateAvailable(let version, let downloadURL):
+        case .updateAvailable(let version):
             VStack(spacing: 8) {
                 Text("New version \(version) available")
                     .foregroundStyle(.secondary)
-                Button("Install & Restart") {
-                    updateManager.downloadAndInstall(url: downloadURL)
-                }
-                .disabled(updateManager.isBusy)
-            }
-
-        case .downloading(let progress):
-            VStack(spacing: 8) {
-                ProgressView(value: progress) {
-                    Text("Downloading\u{2026}")
-                }
-                .frame(width: 180)
-                Text("\(Int(progress * 100))%")
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-            }
-
-        case .downloadFailed(let message):
-            VStack(spacing: 6) {
-                Text(message)
-                    .foregroundStyle(.red)
-                    .multilineTextAlignment(.center)
-                Button("Try Again") {
+                Button("Open Update Dialog") {
                     updateManager.checkForUpdates()
                 }
                 .disabled(updateManager.isBusy)
             }
 
-        case .checkFailed(let message):
+        case .downloading:
+            VStack(spacing: 8) {
+                ProgressView("Downloading update\u{2026}")
+                .frame(width: 180)
+            }
+
+        case .readyToInstall:
             VStack(spacing: 6) {
-                Text(message)
+                Image(systemName: "arrow.down.circle.fill")
+                    .foregroundStyle(.blue)
+                Text("Update downloaded. Sparkle will finish installing it.")
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+        case .failed(let message):
+            VStack(spacing: 6) {
+                Text("Update check failed: \(message)")
                     .foregroundStyle(.red)
                     .multilineTextAlignment(.center)
                 Button("Try Again") {
@@ -101,6 +97,16 @@ struct AboutView: View {
                 .disabled(updateManager.isBusy)
             }
         }
+    }
+
+    private var updatePreferences: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle("Automatically check for updates", isOn: $updateManager.automaticallyChecksForUpdates)
+            Toggle("Download updates in background", isOn: $updateManager.automaticallyDownloadsUpdates)
+                .disabled(!updateManager.automaticallyChecksForUpdates)
+        }
+        .toggleStyle(.checkbox)
+        .foregroundStyle(.secondary)
     }
 
     private var appVersion: String {
