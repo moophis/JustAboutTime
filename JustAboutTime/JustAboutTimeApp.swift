@@ -118,6 +118,7 @@ private enum StatusBarLabelImageRenderer {
     private enum Layout {
         static let dotDiameter = 6.0
         static let dotSpacing = 4.0
+        static let pauseBarWidth = 2.0
         static let progressHeight = 5.0
         static let progressSpacing = 1.0
         static let progressInset = 1.0
@@ -148,9 +149,9 @@ private enum StatusBarLabelImageRenderer {
         let isLeadingRed = presentation.dotPhase == .leadingRed
         let isTrailingRed = presentation.dotPhase == .trailingRed
 
-        drawDot(
-            isVisible: presentation.dotPhase == .leading || isLeadingRed,
-            color: isLeadingRed ? .systemRed : primaryColor,
+        drawLeadingIndicator(
+            presentation.dotPhase,
+            color: isLeadingRed ? .systemRed : textColor,
             in: NSRect(
                 x: rowOriginX,
                 y: progressHeight + (textRowSize.height - Layout.dotDiameter) / 2,
@@ -218,6 +219,34 @@ private enum StatusBarLabelImageRenderer {
 
         color.setFill()
         NSBezierPath(ovalIn: rect).fill()
+    }
+
+    private static func drawLeadingIndicator(_ dotPhase: DotPhase, color: NSColor, in rect: NSRect) {
+        switch dotPhase {
+        case .leading, .leadingRed:
+            drawDot(isVisible: true, color: color, in: rect)
+        case .leadingSquare:
+            drawSquare(color: color, in: rect)
+        case .leadingPause:
+            drawPauseBars(color: color, in: rect)
+        case .hidden, .trailing, .trailingRed:
+            return
+        }
+    }
+
+    private static func drawSquare(color: NSColor, in rect: NSRect) {
+        color.setFill()
+        NSBezierPath(rect: rect).fill()
+    }
+
+    private static func drawPauseBars(color: NSColor, in rect: NSRect) {
+        let gap = rect.width - Layout.pauseBarWidth * 2
+        let leftRect = NSRect(x: rect.minX, y: rect.minY, width: Layout.pauseBarWidth, height: rect.height)
+        let rightRect = NSRect(x: rect.minX + Layout.pauseBarWidth + gap, y: rect.minY, width: Layout.pauseBarWidth, height: rect.height)
+
+        color.setFill()
+        NSBezierPath(rect: leftRect).fill()
+        NSBezierPath(rect: rightRect).fill()
     }
 
     private static func drawProgress(_ progress: CountdownProgressPresentation, primaryColor: NSColor, in rect: NSRect) {

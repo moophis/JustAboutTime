@@ -13,6 +13,8 @@ enum DotPhase: Equatable {
     case trailing
     case leadingRed
     case trailingRed
+    case leadingSquare
+    case leadingPause
 }
 
 struct TimerStatusPresentation: Equatable {
@@ -24,7 +26,7 @@ struct StatusBarPresenter {
     func presentation(for snapshot: TimerStatusSnapshot, animationStep: Int) -> TimerStatusPresentation {
         switch snapshot {
         case .idle:
-            return TimerStatusPresentation(text: format(0), dotPhase: .hidden)
+            return TimerStatusPresentation(text: format(0), dotPhase: .leadingSquare)
         case let .countdown(remaining, isRunning, isWarning):
             return TimerStatusPresentation(
                 text: format(remaining),
@@ -36,7 +38,7 @@ struct StatusBarPresenter {
                 dotPhase: countUpDotPhase(isRunning: isRunning, isOverdue: isOverdue, animationStep: animationStep)
             )
         case .countdownCompleted:
-            return TimerStatusPresentation(text: "00:00", dotPhase: redAlternatingDotPhase(animationStep: animationStep))
+            return TimerStatusPresentation(text: "00:00", dotPhase: .leadingSquare)
         }
     }
 
@@ -54,7 +56,7 @@ struct StatusBarPresenter {
 
     private func countdownDotPhase(isRunning: Bool, isWarning: Bool, animationStep: Int) -> DotPhase {
         guard isRunning else {
-            return .hidden
+            return .leadingPause
         }
 
         guard isWarning else {
@@ -66,7 +68,7 @@ struct StatusBarPresenter {
 
     private func countUpDotPhase(isRunning: Bool, isOverdue: Bool, animationStep: Int) -> DotPhase {
         guard isRunning else {
-            return .hidden
+            return .leadingPause
         }
 
         guard isOverdue else {

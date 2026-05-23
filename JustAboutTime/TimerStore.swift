@@ -35,6 +35,7 @@ final class TimerStore: ObservableObject {
     private var currentTickTaskGeneration: Int?
     private var tickTask: Task<Void, Never>?
     private var lastCompletedCountdownDuration: TimeInterval?
+    private var finishedCountdownDuration: TimeInterval?
     private var isCountingUpAfterCountdown = false
 
     private(set) var wasSystemPaused = false
@@ -57,7 +58,7 @@ final class TimerStore: ObservableObject {
         self.tickInterval = tickInterval
         repeatableStartMode = nil
         activeSession = nil
-        countdownProgress = nil
+        countdownProgress = Self.hollowProgress
         latestEvent = nil
         latestHistoryError = nil
         statusPresentation = presenter.presentation(for: .idle, animationStep: 0)
@@ -93,6 +94,7 @@ final class TimerStore: ObservableObject {
 
     func startCountdown(duration: TimeInterval) {
         wasSystemPaused = false
+        finishedCountdownDuration = nil
         isCountingUpAfterCountdown = false
         let currentTime = now()
         repeatableStartMode = .countdown(duration: duration)
@@ -102,6 +104,7 @@ final class TimerStore: ObservableObject {
 
     func startCountUp() {
         wasSystemPaused = false
+        finishedCountdownDuration = nil
         isCountingUpAfterCountdown = false
         let currentTime = now()
         repeatableStartMode = .countUp
@@ -156,6 +159,7 @@ final class TimerStore: ObservableObject {
 
     func finish() {
         wasSystemPaused = false
+        finishedCountdownDuration = stateMachine.session?.originalDuration
         isCountingUpAfterCountdown = false
         let currentTime = now()
         send(.finish(now: currentTime), referenceTime: currentTime)
@@ -245,9 +249,9 @@ final class TimerStore: ObservableObject {
 
     private func synchronizePresentation(referenceTime: Date, events: [TimerStateMachine.Event] = []) {
         let session = stateMachine.session
-        let isShowingCompletedDot = latestEvent == .countdownCompleted
+        let isShowingCompletedIndicator = latestEvent == .countdownCompleted || finishedCountdownDuration != nil
 
-        if !isShowingCompletedDot && session?.isRunning != true {
+        if !isShowingCompletedIndicator && session?.isRunning != true {
             animationStep = 0
         }
 
@@ -272,8 +276,8 @@ final class TimerStore: ObservableObject {
             return dueCountdownProgress(animationStep: animationStep)
         }
 
-        if session == nil, latestEvent == .countdownCompleted, let duration = lastCompletedCountdownDuration, duration > 0 {
-            return dueCountdownProgress(animationStep: animationStep)
+        if session == nil {
+            return Self.hollowProgress
         }
 
         guard let session,
@@ -295,6 +299,15 @@ final class TimerStore: ObservableObject {
             isWarning: true,
             isBlinking: true,
             isFillVisible: animationStep.isMultiple(of: 2)
+        )
+    }
+
+    private static var hollowProgress: CountdownProgressPresentation {
+        CountdownProgressPresentation(
+            fractionComplete: 1.0,
+            isWarning: false,
+            isBlinking: false,
+            isFillVisible: false
         )
     }
 
@@ -326,19 +339,24 @@ final class TimerStore: ObservableObject {
             return .countdownCompleted
         }
 
+        if finishedCountdownDuration != nil {
+            return .countdownCompleted
+        }
+
         return .idle
     }
 
     private func updateTickTask(for session: TimerSession?) {
-        let isShowingCompletedDot = latestEvent == .countdownCompleted
-
         if session?.isRunning == true {
             tickTask?.cancel()
             tickTask = nil
             currentTickTaskGeneration = nil
         }
 
-        guard session?.isRunning == true || isShowingCompletedDot else {
+        guard session?.isRunning == true else {
+            tickTask?.cancel()
+            tickTask = nil
+            currentTickTaskGeneration = nil
             return
         }
 
