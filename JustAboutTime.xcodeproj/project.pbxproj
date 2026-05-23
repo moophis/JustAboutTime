@@ -33,6 +33,7 @@
 		A10000010000000000000018 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000001A /* AboutView.swift */; };
 		A10000010000000000000019 /* UpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000001B /* UpdateManager.swift */; };
 		A1000001000000000000001A /* UpdateManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000001C /* UpdateManagerTests.swift */; };
+		A1000001000000000000001B /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A10000910000000000000002 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -82,6 +83,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000010000000000000004 /* KeyboardShortcuts in Frameworks */,
+				A1000001000000000000001B /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -171,6 +173,7 @@
 			name = JustAboutTime;
 			packageProductDependencies = (
 				A10000910000000000000001 /* KeyboardShortcuts */,
+				A10000910000000000000002 /* Sparkle */,
 			);
 			productName = JustAboutTime;
 			productReference = A10000110000000000000005 /* JustAboutTime.app */;
@@ -225,6 +228,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				A10000B10000000000000001 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+				A10000B10000000000000002 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A10000510000000000000004 /* Products */;
@@ -356,6 +360,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.liqiangw.JustAboutTime;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				SPARKLE_PUBLIC_ED_KEY = "kUZcUsJuencObsR0bL7HbEf5bCytQ63kbaACh0PbaJA=";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
 			};
@@ -378,6 +383,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.liqiangw.JustAboutTime;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				SPARKLE_PUBLIC_ED_KEY = "kUZcUsJuencObsR0bL7HbEf5bCytQ63kbaACh0PbaJA=";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
 			};
@@ -466,6 +472,14 @@
 				minimumVersion = 2.3.0;
 			};
 		};
+		A10000B10000000000000002 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.8.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -473,6 +487,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A10000B10000000000000001 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
 			productName = KeyboardShortcuts;
+		};
+		A10000910000000000000002 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10000B10000000000000002 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
