@@ -276,6 +276,20 @@ struct TimerStoreTests {
     }
 
     @MainActor
+    @Test func countUpShowsAppIconGradientProgress() {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let store = TimerStore(historyStore: makeIsolatedHistoryStore(), now: { clock.now })
+
+        store.startCountUp()
+
+        #expect(store.countdownProgress == CountdownProgressPresentation(
+            fractionComplete: 1.0,
+            isWarning: false,
+            fillStyle: .appIconGradient
+        ))
+    }
+
+    @MainActor
     @Test func startPauseTogglesActiveSessionState() {
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
         let store = TimerStore(historyStore: makeIsolatedHistoryStore(), now: { clock.now })

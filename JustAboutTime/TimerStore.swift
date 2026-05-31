@@ -281,8 +281,11 @@ final class TimerStore: ObservableObject {
         }
 
         guard let session,
-              let duration = session.originalDuration,
-              duration > 0,
+              let duration = session.originalDuration else {
+            return countUpProgress()
+        }
+
+        guard duration > 0,
               let remaining = session.remainingTime(at: referenceTime) else {
             return nil
         }
@@ -299,6 +302,14 @@ final class TimerStore: ObservableObject {
             isWarning: true,
             isBlinking: true,
             isFillVisible: animationStep.isMultiple(of: 2)
+        )
+    }
+
+    private func countUpProgress() -> CountdownProgressPresentation {
+        CountdownProgressPresentation(
+            fractionComplete: 1.0,
+            isWarning: false,
+            fillStyle: .appIconGradient
         )
     }
 
@@ -406,22 +417,30 @@ final class TimerStore: ObservableObject {
     }
 }
 
+enum ProgressFillStyle: Equatable {
+    case solid
+    case appIconGradient
+}
+
 struct CountdownProgressPresentation: Equatable {
     let fractionComplete: Double
     let isWarning: Bool
     let isBlinking: Bool
     let isFillVisible: Bool
+    let fillStyle: ProgressFillStyle
 
     init(
         fractionComplete: Double,
         isWarning: Bool,
         isBlinking: Bool = false,
-        isFillVisible: Bool = true
+        isFillVisible: Bool = true,
+        fillStyle: ProgressFillStyle = .solid
     ) {
         self.fractionComplete = fractionComplete
         self.isWarning = isWarning
         self.isBlinking = isBlinking
         self.isFillVisible = isFillVisible
+        self.fillStyle = fillStyle
     }
 }
 

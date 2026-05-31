@@ -198,7 +198,8 @@ private enum StatusBarLabelImageRenderer {
         presentation.dotPhase == .leadingRed ||
             presentation.dotPhase == .trailingRed ||
             countdownProgress?.isWarning == true ||
-            countdownProgress?.isBlinking == true
+            countdownProgress?.isBlinking == true ||
+            countdownProgress?.fillStyle.requiresOriginalColor == true
     }
 
     private static func menuBarPrimaryColor(for colorScheme: ColorScheme) -> NSColor {
@@ -277,7 +278,38 @@ private enum StatusBarLabelImageRenderer {
             xRadius: fillRect.height / 2,
             yRadius: fillRect.height / 2
         )
-        progressColor.withAlphaComponent(0.75).setFill()
-        fillPath.fill()
+
+        switch progress.fillStyle {
+        case .solid:
+            progressColor.withAlphaComponent(0.75).setFill()
+            fillPath.fill()
+        case .appIconGradient:
+            drawAppIconGradientFill(in: fillPath, rect: fillRect)
+        }
+    }
+
+    private static func drawAppIconGradientFill(in path: NSBezierPath, rect: NSRect) {
+        NSGraphicsContext.saveGraphicsState()
+        defer { NSGraphicsContext.restoreGraphicsState() }
+
+        path.addClip()
+        appIconGradient.draw(in: rect, angle: 0)
+    }
+
+    private static var appIconGradient: NSGradient {
+        let iconBlue = NSColor(red: 0.22, green: 0.44, blue: 1.0, alpha: 1.0)
+        let iconPink = NSColor(red: 1.0, green: 0.25, blue: 0.82, alpha: 1.0)
+        return NSGradient(colors: [iconBlue, iconPink]) ?? NSGradient(colors: [.systemBlue, .systemPink])!
+    }
+}
+
+private extension ProgressFillStyle {
+    var requiresOriginalColor: Bool {
+        switch self {
+        case .solid:
+            return false
+        case .appIconGradient:
+            return true
+        }
     }
 }
