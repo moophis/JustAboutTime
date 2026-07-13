@@ -151,6 +151,9 @@ SPARKLE_ZIP="$BUILD_DIR/$APP_NAME-$VERSION.zip"
 /usr/bin/ditto -c -k --keepParent "$APP_PATH" "$SPARKLE_ZIP"
 
 info "Generating appcast.xml"
+# Remove notary zip to avoid duplicate archive conflict with generate_appcast
+rm -f "$NOTARY_ZIP"
+
 GENERATE_APPCAST=$(find "$ROOT_DIR" ~/Library/Developer/Xcode/DerivedData -path "*/Sparkle/bin/generate_appcast" -type f 2>/dev/null | head -1)
 APPCAST="$BUILD_DIR/appcast.xml"
 if [[ -n "$GENERATE_APPCAST" ]]; then
