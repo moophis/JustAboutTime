@@ -146,4 +146,32 @@ xcrun stapler validate "$FINAL_DMG"
 info "Assessing DMG with Gatekeeper"
 spctl --assess --type open --context context:primary-signature --verbose=4 "$FINAL_DMG"
 
-info "Release artifact ready: $FINAL_DMG"
+info "Creating Sparkle-compatible zip"
+SPARKLE_ZIP="$BUILD_DIR/$APP_NAME-$VERSION.zip"
+/usr/bin/ditto -c -k --keepParent "$APP_PATH" "$SPARKLE_ZIP"
+
+info "Generating appcast.xml"
+GENERATE_APPCAST=$(find "$ROOT_DIR" ~/Library/Developer/Xcode/DerivedData -path "*/Sparkle/bin/generate_appcast" -type f 2>/dev/null | head -1)
+APPCAST="$BUILD_DIR/appcast.xml"
+if [[ -n "$GENERATE_APPCAST" ]]; then
+  if security find-generic-password -a "JustAboutTime" -w &>/dev/null; then
+    "$GENERATE_APPCAST" --account "JustAboutTime" "$BUILD_DIR"
+    if [[ -f "$APPCAST" ]]; then
+      info "Appcast generated: $APPCAST"
+    else
+      info "Warning: generate_appcast ran but appcast.xml not found"
+    fi
+  else
+    info "Warning: Sparkle private key not found in keychain (account: JustAboutTime). Skipping generate_appcast."
+    info "  Install key first, then run: $GENERATE_APPCAST --account JustAboutTime $BUILD_DIR"
+  fi
+else
+  info "Warning: generate_appcast binary not found. Install Sparkle CLI tools."
+fi
+
+info "Release artifacts ready:"
+info "  DMG:   $FINAL_DMG"
+info "  ZIP:   $SPARKLE_ZIP"
+if [[ -f "$APPCAST" ]]; then
+  info "  Appcast: $APPCAST"
+fi
