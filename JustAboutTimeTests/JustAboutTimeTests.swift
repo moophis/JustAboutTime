@@ -242,10 +242,20 @@ struct JustAboutTimeTests {
         let menuSource = try source(at: projectFilePath("JustAboutTime/MenuBarView.swift"))
 
         #expect(menuSource.contains("Label(isRunning ? \"Pause\" : \"Resume\", systemImage: isRunning ? \"pause.fill\" : \"play.fill\")"))
-        #expect(menuSource.contains("Text(\"Restart\")"))
+        #expect(menuSource.contains("Button(\"Restart\")"))
         #expect(menuSource.contains("Label(\"Finish\", systemImage: \"checkmark.circle\")"))
         #expect(menuSource.contains("timerInfo"))
         #expect(menuSource.contains("StableTimerStatusView(timerStore: timerStore)"))
+    }
+
+    @Test func menuBarViewAssignsLocalTimerShortcuts() throws {
+        let menuSource = try source(at: projectFilePath("JustAboutTime/MenuBarView.swift"))
+
+        #expect(menuSource.contains(".keyboardShortcut(\"p\", modifiers: [])"))
+        #expect(menuSource.contains(".keyboardShortcut(\"r\", modifiers: [])"))
+        #expect(menuSource.contains(".keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: [])"))
+        #expect(menuSource.contains(".keyboardShortcut(\"4\", modifiers: [])"))
+        #expect(menuSource.contains(".keyboardShortcut(\"f\", modifiers: [])"))
     }
 
     @Test func statusBarLabelKeepsFixedDotSlotsAndTemplateTintWhenPossible() throws {

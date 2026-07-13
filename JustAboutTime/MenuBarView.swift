@@ -28,6 +28,7 @@ struct MenuBarView: View {
         Button("Count Up") {
             timerStore.startCountUp()
         }
+        .keyboardShortcut("4", modifiers: [])
 
         Divider()
         aboutButton
@@ -49,6 +50,7 @@ struct MenuBarView: View {
         } label: {
             Label("Finish", systemImage: "checkmark.circle")
         }
+        .keyboardShortcut("f", modifiers: [])
 
         Divider()
         timerInfo
@@ -82,22 +84,27 @@ struct MenuBarView: View {
         } label: {
             Label(isRunning ? "Pause" : "Resume", systemImage: isRunning ? "pause.fill" : "play.fill")
         }
+        .keyboardShortcut("p", modifiers: [])
     }
 
     @ViewBuilder
     private var restartSection: some View {
-        Text("Restart")
-            .disabled(true)
+        Button("Restart") {
+            timerStore.restart()
+        }
+        .keyboardShortcut("r", modifiers: [])
 
-        ForEach(Array(preferencesStore.presetDurations.enumerated()), id: \.offset) { _, duration in
+        ForEach(Array(preferencesStore.presetDurations.enumerated()), id: \.offset) { index, duration in
             Button(indentedCountdownTitle(for: duration)) {
                 timerStore.startCountdown(duration: duration)
             }
+            .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: [])
         }
 
         Button("  Count Up") {
             timerStore.startCountUp()
         }
+        .keyboardShortcut("4", modifiers: [])
     }
 
     private var timerInfo: some View {
