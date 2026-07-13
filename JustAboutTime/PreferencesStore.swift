@@ -12,7 +12,9 @@ final class PreferencesStore: ObservableObject {
 
     private enum Storage {
         static let presetDurationsKey = "presetDurations"
+        static let secondaryPresetDurationsKey = "secondaryPresetDurations"
         static let lastTimerTypeKey = "lastTimerType"
+        static let secondaryLastTimerTypeKey = "secondaryLastTimerType"
         static let openOnRestartKey = "openOnRestart"
         static let pauseOnScreenLockedKey = "pauseOnScreenLocked"
         static let resumeOnReloginKey = "resumeOnRelogin"
@@ -23,7 +25,9 @@ final class PreferencesStore: ObservableObject {
     private var isApplyingOpenOnRestart = false
 
     @Published private(set) var presetDurations: [TimeInterval]
-    @Published var lastTimerType: TimerMode?
+    @Published private(set) var secondaryPresetDurations: [TimeInterval]
+    @Published private(set) var lastTimerType: TimerMode?
+    @Published private(set) var secondaryLastTimerType: TimerMode?
     @Published var openOnRestart: Bool {
         didSet {
             userDefaults.set(openOnRestart, forKey: Storage.openOnRestartKey)
@@ -47,14 +51,17 @@ final class PreferencesStore: ObservableObject {
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
-        presetDurations = Self.loadPresetDurations(from: userDefaults)
-        lastTimerType = Self.loadLastTimerType(from: userDefaults)
+        presetDurations = Self.loadPresetDurations(from: userDefaults, key: Storage.presetDurationsKey)
+        secondaryPresetDurations = Self.loadPresetDurations(from: userDefaults, key: Storage.secondaryPresetDurationsKey)
+        lastTimerType = Self.loadLastTimerType(from: userDefaults, key: Storage.lastTimerTypeKey)
+        secondaryLastTimerType = Self.loadLastTimerType(from: userDefaults, key: Storage.secondaryLastTimerTypeKey)
         openOnRestart = userDefaults.bool(forKey: Storage.openOnRestartKey)
         pauseOnScreenLocked = userDefaults.bool(forKey: Storage.pauseOnScreenLockedKey)
         resumeOnRelogin = userDefaults.bool(forKey: Storage.resumeOnReloginKey)
         countUpAfterCountdown = userDefaults.bool(forKey: Storage.countUpAfterCountdownKey)
         shortcutNames = AppShortcuts.allNames
-        persistPresetDurations(presetDurations)
+        persistPresetDurations(presetDurations, for: .primary)
+        persistPresetDurations(secondaryPresetDurations, for: .secondary)
     }
 
     private func applyOpenOnRestart() {
@@ -74,9 +81,27 @@ final class PreferencesStore: ObservableObject {
     }
 
     func setPresetDurations(_ durations: [TimeInterval]) throws {
+        try setPresetDurations(durations, for: .primary)
+    }
+
+    func presetDurations(for role: TimerRole) -> [TimeInterval] {
+        switch role {
+        case .primary:
+            return presetDurations
+        case .secondary:
+            return secondaryPresetDurations
+        }
+    }
+
+    func setPresetDurations(_ durations: [TimeInterval], for role: TimerRole) throws {
         let sanitizedDurations = try Self.validatePresetDurations(durations)
-        presetDurations = sanitizedDurations
-        persistPresetDurations(sanitizedDurations)
+        switch role {
+        case .primary:
+            presetDurations = sanitizedDurations
+        case .secondary:
+            secondaryPresetDurations = sanitizedDurations
+        }
+        persistPresetDurations(sanitizedDurations, for: role)
     }
 
     func shortcut(for name: KeyboardShortcuts.Name) -> KeyboardShortcuts.Shortcut? {
@@ -88,29 +113,71 @@ final class PreferencesStore: ObservableObject {
     }
 
     func setLastTimerType(_ mode: TimerMode?) {
-        lastTimerType = mode
-        persistLastTimerType(mode)
+        setLastTimerType(mode, for: .primary)
     }
 
-    private func persistPresetDurations(_ durations: [TimeInterval]) {
-        userDefaults.set(durations, forKey: Storage.presetDurationsKey)
-    }
-
-    private func persistLastTimerType(_ mode: TimerMode?) {
-        if let mode {
-            switch mode {
-            case let .countdown(duration):
-                userDefaults.set(duration, forKey: Storage.lastTimerTypeKey)
-            case .countUp:
-                userDefaults.set(0, forKey: Storage.lastTimerTypeKey)
-            }
-        } else {
-            userDefaults.removeObject(forKey: Storage.lastTimerTypeKey)
+    func lastTimerType(for role: TimerRole) -> TimerMode? {
+        switch role {
+        case .primary:
+            return lastTimerType
+        case .secondary:
+            return secondaryLastTimerType
         }
     }
 
-    private static func loadPresetDurations(from userDefaults: UserDefaults) -> [TimeInterval] {
-        guard let storedValues = userDefaults.array(forKey: Storage.presetDurationsKey) else {
+    func setLastTimerType(_ mode: TimerMode?, for role: TimerRole) {
+        switch role {
+        case .primary:
+            lastTimerType = mode
+        case .secondary:
+            secondaryLastTimerType = mode
+        }
+        persistLastTimerType(mode, for: role)
+    }
+
+    func swapTimerProfiles() {
+        let primaryDurations = presetDurations
+        let primaryLastTimerType = lastTimerType
+
+        presetDurations = secondaryPresetDurations
+        lastTimerType = secondaryLastTimerType
+        secondaryPresetDurations = primaryDurations
+        secondaryLastTimerType = primaryLastTimerType
+
+        persistPresetDurations(presetDurations, for: .primary)
+        persistPresetDurations(secondaryPresetDurations, for: .secondary)
+        persistLastTimerType(lastTimerType, for: .primary)
+        persistLastTimerType(secondaryLastTimerType, for: .secondary)
+    }
+
+    private func persistPresetDurations(_ durations: [TimeInterval], for role: TimerRole) {
+        userDefaults.set(durations, forKey: presetDurationsKey(for: role))
+    }
+
+    private func persistLastTimerType(_ mode: TimerMode?, for role: TimerRole) {
+        let key = lastTimerTypeKey(for: role)
+        if let mode {
+            switch mode {
+            case let .countdown(duration):
+                userDefaults.set(duration, forKey: key)
+            case .countUp:
+                userDefaults.set(0, forKey: key)
+            }
+        } else {
+            userDefaults.removeObject(forKey: key)
+        }
+    }
+
+    private func presetDurationsKey(for role: TimerRole) -> String {
+        role == .primary ? Storage.presetDurationsKey : Storage.secondaryPresetDurationsKey
+    }
+
+    private func lastTimerTypeKey(for role: TimerRole) -> String {
+        role == .primary ? Storage.lastTimerTypeKey : Storage.secondaryLastTimerTypeKey
+    }
+
+    private static func loadPresetDurations(from userDefaults: UserDefaults, key: String) -> [TimeInterval] {
+        guard let storedValues = userDefaults.array(forKey: key) else {
             return AppConfiguration.defaultPresetDurations
         }
 
@@ -135,12 +202,12 @@ final class PreferencesStore: ObservableObject {
         return sanitizedDurations
     }
 
-    private static func loadLastTimerType(from userDefaults: UserDefaults) -> TimerMode? {
-        guard userDefaults.object(forKey: Storage.lastTimerTypeKey) != nil else {
+    private static func loadLastTimerType(from userDefaults: UserDefaults, key: String) -> TimerMode? {
+        guard userDefaults.object(forKey: key) != nil else {
             return nil
         }
 
-        let value = userDefaults.double(forKey: Storage.lastTimerTypeKey)
+        let value = userDefaults.double(forKey: key)
         if value > 0 {
             return .countdown(duration: value)
         } else {

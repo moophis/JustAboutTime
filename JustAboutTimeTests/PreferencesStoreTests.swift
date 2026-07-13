@@ -33,7 +33,9 @@ struct PreferencesStoreTests {
         let store = PreferencesStore(userDefaults: userDefaults)
 
         #expect(store.presetDurations == AppConfiguration.defaultPresetDurations)
+        #expect(store.secondaryPresetDurations == AppConfiguration.defaultPresetDurations)
         #expect(storedPresetDurations(in: userDefaults) == AppConfiguration.defaultPresetDurations)
+        #expect(storedPresetDurations(in: userDefaults, key: "secondaryPresetDurations") == AppConfiguration.defaultPresetDurations)
         #expect(store.shortcutNames.map(\.rawValue) == ["startPauseTimer", "restartTimer", "finishTimer"])
     }
 
@@ -62,6 +64,40 @@ struct PreferencesStoreTests {
 
         #expect(relaunchedStore.presetDurations == [60, 120, 180])
         #expect(storedPresetDurations(in: userDefaults) == [60, 120, 180])
+    }
+
+    @Test func secondaryPresetDurationsPersistIndependently() throws {
+        let userDefaults = makeUserDefaults()
+        let firstLaunchStore = PreferencesStore(userDefaults: userDefaults)
+
+        try firstLaunchStore.setPresetDurations([600, 1_200, 1_800], for: .secondary)
+
+        let relaunchedStore = PreferencesStore(userDefaults: userDefaults)
+
+        #expect(relaunchedStore.presetDurations(for: .primary) == AppConfiguration.defaultPresetDurations)
+        #expect(relaunchedStore.presetDurations(for: .secondary) == [600, 1_200, 1_800])
+    }
+
+    @Test func swappingTimerProfilesPersistsPresetsAndLastModes() throws {
+        let userDefaults = makeUserDefaults()
+        let store = PreferencesStore(userDefaults: userDefaults)
+        try store.setPresetDurations([60, 120, 180], for: .primary)
+        try store.setPresetDurations([600, 1_200, 1_800], for: .secondary)
+        store.setLastTimerType(.countdown(duration: 120), for: .primary)
+        store.setLastTimerType(.countUp, for: .secondary)
+
+        store.swapTimerProfiles()
+
+        #expect(store.presetDurations(for: .primary) == [600, 1_200, 1_800])
+        #expect(store.presetDurations(for: .secondary) == [60, 120, 180])
+        #expect(store.lastTimerType(for: .primary) == .countUp)
+        #expect(store.lastTimerType(for: .secondary) == .countdown(duration: 120))
+
+        let relaunchedStore = PreferencesStore(userDefaults: userDefaults)
+        #expect(relaunchedStore.presetDurations(for: .primary) == [600, 1_200, 1_800])
+        #expect(relaunchedStore.presetDurations(for: .secondary) == [60, 120, 180])
+        #expect(relaunchedStore.lastTimerType(for: .primary) == .countUp)
+        #expect(relaunchedStore.lastTimerType(for: .secondary) == .countdown(duration: 120))
     }
 
     @Test func oversizedPresetDurationsClampBeforePersisting() throws {
@@ -103,8 +139,8 @@ struct PreferencesStoreTests {
 
         let store = PreferencesStore(userDefaults: userDefaults)
 
-        #expect(store.presetDurations == [600, 1_500, 3_000])
-        #expect(storedPresetDurations(in: userDefaults) == [600, 1_500, 3_000])
+        #expect(store.presetDurations == [600, 1_500, 2_700])
+        #expect(storedPresetDurations(in: userDefaults) == [600, 1_500, 2_700])
     }
 
     @Test func extraStoredPresetDurationsAreIgnored() {
@@ -125,7 +161,11 @@ struct PreferencesStoreTests {
     }
 
     private func storedPresetDurations(in userDefaults: UserDefaults) -> [TimeInterval]? {
-        userDefaults.array(forKey: "presetDurations") as? [TimeInterval]
+        storedPresetDurations(in: userDefaults, key: "presetDurations")
+    }
+
+    private func storedPresetDurations(in userDefaults: UserDefaults, key: String) -> [TimeInterval]? {
+        userDefaults.array(forKey: key) as? [TimeInterval]
     }
 
     private func resetShortcuts() {

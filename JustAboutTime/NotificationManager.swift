@@ -140,7 +140,7 @@ func requestAuthorization() async {
     }
 }
 
-    func notifyCountdownCompleted(duration: TimeInterval) async {
+    func notifyCountdownCompleted(duration: TimeInterval, timerRole: TimerRole = .primary) async {
         var status = await currentAuthorizationStatus(forceRefresh: true)
 
         if status == .notDetermined {
@@ -153,8 +153,8 @@ func requestAuthorization() async {
 
         let request = Request(
             identifier: UUID().uuidString,
-            title: "Countdown Complete",
-            body: "Your \(formattedDuration(duration)) countdown finished.",
+            title: "\(timerRole.displayName) Countdown Complete",
+            body: "Your \(formattedDuration(duration)) \(timerRole.rawValue) countdown finished.",
             sound: true
         )
 

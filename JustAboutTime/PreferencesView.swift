@@ -32,11 +32,26 @@ private struct GeneralPreferencesView: View {
 
     var body: some View {
         PreferencesPage {
-            PreferencesGroup(title: "COUNTDOWN") {
-                ForEach(Array(preferencesStore.presetDurations.enumerated()), id: \.offset) { index, _ in
+            PreferencesGroup(title: "COUNTDOWN TIMERS") {
+                Text("Primary Timer")
+                    .font(.body.weight(.semibold))
+
+                ForEach(Array(preferencesStore.presetDurations(for: .primary).enumerated()), id: \.offset) { index, _ in
                     PresetDurationRow(
                         title: "Preset \(index + 1)",
-                        duration: durationBinding(for: index)
+                        duration: durationBinding(for: index, role: .primary)
+                    )
+                }
+
+                Divider()
+
+                Text("Secondary Timer")
+                    .font(.body.weight(.semibold))
+
+                ForEach(Array(preferencesStore.presetDurations(for: .secondary).enumerated()), id: \.offset) { index, _ in
+                    PresetDurationRow(
+                        title: "Preset \(index + 1)",
+                        duration: durationBinding(for: index, role: .secondary)
                     )
                 }
             }
@@ -62,17 +77,17 @@ private struct GeneralPreferencesView: View {
         }
     }
 
-    private func durationBinding(for index: Int) -> Binding<TimeInterval> {
+    private func durationBinding(for index: Int, role: TimerRole) -> Binding<TimeInterval> {
         Binding(
             get: {
-                preferencesStore.presetDurations[index]
+                preferencesStore.presetDurations(for: role)[index]
             },
             set: { newValue in
                 let clampedDuration = max(AppConfiguration.minimumPresetDuration, min(newValue, AppConfiguration.maximumPresetDuration))
-                let updatedDurations = preferencesStore.presetDurations.enumerated().map { currentIndex, currentDuration in
+                let updatedDurations = preferencesStore.presetDurations(for: role).enumerated().map { currentIndex, currentDuration in
                     currentIndex == index ? clampedDuration : currentDuration
                 }
-                try? preferencesStore.setPresetDurations(updatedDurations)
+                try? preferencesStore.setPresetDurations(updatedDurations, for: role)
             }
         )
     }
@@ -94,7 +109,7 @@ private struct ShortcutPreferencesView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                Text("Conflicting or invalid shortcuts are rejected automatically.")
+                Text("Global shortcuts always control the current Primary Timer. Secondary Timer shortcuts are available while the menu is open. Conflicting or invalid shortcuts are rejected automatically.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

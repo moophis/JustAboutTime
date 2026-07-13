@@ -34,6 +34,9 @@
 		A10000010000000000000019 /* UpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000001B /* UpdateManager.swift */; };
 		A1000001000000000000001A /* UpdateManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000001C /* UpdateManagerTests.swift */; };
 		A1000001000000000000001B /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A10000910000000000000002 /* Sparkle */; };
+		A1000001000000000000001C /* TimerRole.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000001D /* TimerRole.swift */; };
+		A1000001000000000000001D /* TimerCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000001E /* TimerCoordinator.swift */; };
+		A1000001000000000000001E /* TimerCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000001F /* TimerCoordinatorTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -75,6 +78,9 @@
 		A1000011000000000000001A /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		A1000011000000000000001B /* UpdateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateManager.swift; sourceTree = "<group>"; };
 		A1000011000000000000001C /* UpdateManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateManagerTests.swift; sourceTree = "<group>"; };
+		A1000011000000000000001D /* TimerRole.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerRole.swift; sourceTree = "<group>"; };
+		A1000011000000000000001E /* TimerCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerCoordinator.swift; sourceTree = "<group>"; };
+		A1000011000000000000001F /* TimerCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerCoordinatorTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -125,7 +131,9 @@
 				A10000110000000000000018 /* ShortcutManager.swift */,
 				A1000011000000000000000D /* StatusBarPresenter.swift */,
 				A10000110000000000000009 /* TimerMode.swift */,
+				A1000011000000000000001D /* TimerRole.swift */,
 				A1000011000000000000000A /* TimerSession.swift */,
+				A1000011000000000000001E /* TimerCoordinator.swift */,
 				A1000011000000000000000E /* TimerStore.swift */,
 				A1000011000000000000000B /* TimerStateMachine.swift */,
 				A10000110000000000000003 /* Info.plist */,
@@ -141,6 +149,7 @@
 				A10000110000000000000010 /* PreferencesStoreTests.swift */,
 				A10000110000000000000017 /* NotificationManagerTests.swift */,
 				A1000011000000000000000C /* TimerStoreTests.swift */,
+				A1000011000000000000001F /* TimerCoordinatorTests.swift */,
 				A1000011000000000000001C /* UpdateManagerTests.swift */,
 			);
 			path = JustAboutTimeTests;
@@ -272,7 +281,9 @@
 				A10000010000000000000016 /* ShortcutManager.swift in Sources */,
 				A1000001000000000000000B /* StatusBarPresenter.swift in Sources */,
 				A10000010000000000000007 /* TimerMode.swift in Sources */,
+				A1000001000000000000001C /* TimerRole.swift in Sources */,
 				A10000010000000000000008 /* TimerSession.swift in Sources */,
+				A1000001000000000000001D /* TimerCoordinator.swift in Sources */,
 				A1000001000000000000000C /* TimerStore.swift in Sources */,
 				A10000010000000000000009 /* TimerStateMachine.swift in Sources */,
 			);
@@ -287,6 +298,7 @@
 				A10000010000000000000015 /* NotificationManagerTests.swift in Sources */,
 				A1000001000000000000000E /* PreferencesStoreTests.swift in Sources */,
 				A1000001000000000000000A /* TimerStoreTests.swift in Sources */,
+				A1000001000000000000001E /* TimerCoordinatorTests.swift in Sources */,
 				A1000001000000000000001A /* UpdateManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

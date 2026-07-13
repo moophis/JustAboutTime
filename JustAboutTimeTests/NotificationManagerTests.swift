@@ -56,6 +56,18 @@ struct NotificationManagerTests {
     }
 
     @MainActor
+    @Test func completedCountdownNotificationIdentifiesTimerRole() async throws {
+        let center = TestNotificationManagerCenter(initialStatus: .authorized)
+        let manager = NotificationManager(client: center.makeClient())
+
+        await manager.notifyCountdownCompleted(duration: 25 * 60, timerRole: .secondary)
+
+        let request = try #require(await center.requests.first)
+        #expect(request.title == "Secondary Countdown Complete")
+        #expect(request.body == "Your 25m secondary countdown finished.")
+    }
+
+    @MainActor
     @Test func notifyCountdownCompletedDoesNothingWhenDenied() async {
         let center = TestNotificationManagerCenter(initialStatus: .denied)
         let manager = NotificationManager(client: center.makeClient())

@@ -14,11 +14,11 @@ enum AppShortcuts {
     static func title(for name: KeyboardShortcuts.Name) -> String {
         switch name {
         case startPauseTimer:
-            return "Start or Pause Timer"
+            return "Start or Pause Primary Timer"
         case restartTimer:
-            return "Restart Timer"
+            return "Restart Primary Timer"
         case finishTimer:
-            return "Finish Timer"
+            return "Finish Primary Timer"
         default:
             return name.rawValue
         }

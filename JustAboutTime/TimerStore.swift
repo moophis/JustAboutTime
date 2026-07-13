@@ -14,12 +14,22 @@ final class TimerStore: ObservableObject {
         case countdownCompleted
     }
 
+    struct HistoryFailure: Equatable {
+        let timerRole: TimerRole
+        let error: HistoryStore.HistoryError
+    }
+
+    private(set) var role: TimerRole
     @Published private(set) var activeSession: TimerSession?
     @Published private(set) var statusText: String = "00:00"
     @Published private(set) var statusPresentation: TimerStatusPresentation
     @Published private(set) var countdownProgress: CountdownProgressPresentation?
     @Published private(set) var latestEvent: Event?
-    @Published private(set) var latestHistoryError: HistoryStore.HistoryError?
+    @Published private(set) var latestHistoryFailure: HistoryFailure?
+
+    var latestHistoryError: HistoryStore.HistoryError? {
+        latestHistoryFailure?.error
+    }
 
     private var stateMachine = TimerStateMachine()
     private let presenter: StatusBarPresenter
@@ -41,6 +51,7 @@ final class TimerStore: ObservableObject {
     private(set) var wasSystemPaused = false
 
     init(
+        role: TimerRole = .primary,
         presenter: StatusBarPresenter = StatusBarPresenter(),
         historyStore: HistoryStore = HistoryStore(),
         notificationManager: NotificationManager = NotificationManager(),
@@ -49,6 +60,7 @@ final class TimerStore: ObservableObject {
         sleep: @escaping Sleep = { try await Task.sleep(for: $0) },
         tickInterval: Duration = .seconds(1)
     ) {
+        self.role = role
         self.presenter = presenter
         self.historyStore = historyStore
         self.notificationManager = notificationManager
@@ -60,13 +72,13 @@ final class TimerStore: ObservableObject {
         activeSession = nil
         countdownProgress = Self.hollowProgress
         latestEvent = nil
-        latestHistoryError = nil
+        latestHistoryFailure = nil
         statusPresentation = presenter.presentation(for: .idle, animationStep: 0)
         loadLastTimerType()
     }
 
     private func loadLastTimerType() {
-        guard let lastTimerType = preferencesStore.lastTimerType else {
+        guard let lastTimerType = preferencesStore.lastTimerType(for: role) else {
             return
         }
 
@@ -98,7 +110,7 @@ final class TimerStore: ObservableObject {
         isCountingUpAfterCountdown = false
         let currentTime = now()
         repeatableStartMode = .countdown(duration: duration)
-        preferencesStore.setLastTimerType(.countdown(duration: duration))
+        preferencesStore.setLastTimerType(.countdown(duration: duration), for: role)
         send(.startCountdown(duration: duration, now: currentTime), referenceTime: currentTime)
     }
 
@@ -108,7 +120,7 @@ final class TimerStore: ObservableObject {
         isCountingUpAfterCountdown = false
         let currentTime = now()
         repeatableStartMode = .countUp
-        preferencesStore.setLastTimerType(.countUp)
+        preferencesStore.setLastTimerType(.countUp, for: role)
         send(.startCountUp(now: currentTime), referenceTime: currentTime)
     }
 
@@ -165,6 +177,20 @@ final class TimerStore: ObservableObject {
         send(.finish(now: currentTime), referenceTime: currentTime)
     }
 
+    func deactivate() {
+        finish()
+        latestEvent = nil
+        finishedCountdownDuration = nil
+        lastCompletedCountdownDuration = nil
+        isCountingUpAfterCountdown = false
+        animationStep = 0
+        synchronizePresentation(referenceTime: now())
+    }
+
+    func assignRole(_ role: TimerRole) {
+        self.role = role
+    }
+
     private func startMostRecentMode(referenceTime: Date) {
         guard let repeatableStartMode else {
             return
@@ -217,8 +243,9 @@ final class TimerStore: ObservableObject {
             return
         }
 
+        let timerRole = role
         Task { @MainActor [notificationManager] in
-            await notificationManager.notifyCountdownCompleted(duration: duration)
+            await notificationManager.notifyCountdownCompleted(duration: duration, timerRole: timerRole)
         }
     }
 
@@ -234,6 +261,7 @@ final class TimerStore: ObservableObject {
         }
 
         let result = historyStore.recordCompletedCountdown(
+            timerRole: role,
             presetDuration: presetDuration,
             startedAt: session.startedAt,
             completedAt: completedAt
@@ -241,9 +269,9 @@ final class TimerStore: ObservableObject {
 
         switch result {
         case .success:
-            latestHistoryError = nil
+            latestHistoryFailure = nil
         case let .failure(error):
-            latestHistoryError = error
+            latestHistoryFailure = HistoryFailure(timerRole: role, error: error)
         }
     }
 

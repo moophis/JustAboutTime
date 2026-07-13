@@ -13,26 +13,26 @@ final class ShortcutManager: ObservableObject {
         }
     }
 
-    private let timerStore: TimerStore
+    private let timerCoordinator: TimerCoordinator
     private let client: Client
 
-    init(timerStore: TimerStore, client: Client = .live) {
-        self.timerStore = timerStore
+    init(timerCoordinator: TimerCoordinator, client: Client = .live) {
+        self.timerCoordinator = timerCoordinator
         self.client = client
         registerHandlers()
     }
 
     private func registerHandlers() {
-        client.onKeyUp(AppConfiguration.startPauseShortcutName) { [timerStore] in
-            timerStore.toggleStartPause()
+        client.onKeyUp(AppConfiguration.startPauseShortcutName) { [timerCoordinator] in
+            timerCoordinator.primaryTimer.toggleStartPause()
         }
 
-        client.onKeyUp(AppConfiguration.restartShortcutName) { [timerStore] in
-            timerStore.restart()
+        client.onKeyUp(AppConfiguration.restartShortcutName) { [timerCoordinator] in
+            timerCoordinator.primaryTimer.restart()
         }
 
-        client.onKeyUp(AppConfiguration.finishShortcutName) { [timerStore] in
-            timerStore.finish()
+        client.onKeyUp(AppConfiguration.finishShortcutName) { [timerCoordinator] in
+            timerCoordinator.primaryTimer.finish()
         }
     }
 }

@@ -73,6 +73,7 @@ final class HistoryStore: ObservableObject {
     @discardableResult
     func recordCompletedCountdown(
         id: UUID = UUID(),
+        timerRole: TimerRole = .primary,
         presetDuration: TimeInterval,
         startedAt: Date,
         completedAt: Date
@@ -90,6 +91,7 @@ final class HistoryStore: ObservableObject {
         updatedEntries.insert(
             HistoryEntry(
                 id: id,
+                timerRole: timerRole,
                 presetDuration: presetDuration,
                 startedAt: startedAt,
                 completedAt: completedAt

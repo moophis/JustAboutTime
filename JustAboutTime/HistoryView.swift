@@ -2,14 +2,14 @@ import SwiftUI
 
 struct HistoryView: View {
     @ObservedObject var historyStore: HistoryStore
-    @ObservedObject var timerStore: TimerStore
+    @ObservedObject var timerCoordinator: TimerCoordinator
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if let saveError = timerStore.latestHistoryError {
+            ForEach(Array(timerCoordinator.latestHistoryFailures.enumerated()), id: \.offset) { _, failure in
                 HistoryErrorBanner(
-                    title: "Latest Countdown Was Not Saved",
-                    message: saveErrorMessage(for: saveError)
+                    title: "Latest \(failure.timerRole.displayName) Countdown Was Not Saved",
+                    message: saveErrorMessage(for: failure.error)
                 )
             }
 
@@ -32,6 +32,10 @@ struct HistoryView: View {
                     )
                 } else {
                     Table(historyStore.entries) {
+                        TableColumn("Timer") { entry in
+                            Text(entry.timerRole.displayName)
+                        }
+
                         TableColumn("Duration") { entry in
                             Text(formattedDuration(entry.presetDuration))
                         }

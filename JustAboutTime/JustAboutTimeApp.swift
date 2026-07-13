@@ -6,7 +6,7 @@ struct JustAboutTimeApp: App {
     @StateObject private var historyStore: HistoryStore
     @StateObject private var notificationManager: NotificationManager
     @StateObject private var preferencesStore = PreferencesStore()
-    @StateObject private var timerStore: TimerStore
+    @StateObject private var timerCoordinator: TimerCoordinator
     @StateObject private var shortcutManager: ShortcutManager
     @StateObject private var updateManager = UpdateManager()
 
@@ -14,68 +14,69 @@ struct JustAboutTimeApp: App {
         let historyStore = HistoryStore()
         let notificationManager = NotificationManager()
         let preferencesStore = PreferencesStore()
-        let timerStore = TimerStore(historyStore: historyStore, notificationManager: notificationManager, preferencesStore: preferencesStore)
+        let timerCoordinator = TimerCoordinator(
+            historyStore: historyStore,
+            notificationManager: notificationManager,
+            preferencesStore: preferencesStore
+        )
         _historyStore = StateObject(wrappedValue: historyStore)
         _notificationManager = StateObject(wrappedValue: notificationManager)
         _preferencesStore = StateObject(wrappedValue: preferencesStore)
-        _timerStore = StateObject(wrappedValue: timerStore)
-        _shortcutManager = StateObject(wrappedValue: ShortcutManager(timerStore: timerStore))
+        _timerCoordinator = StateObject(wrappedValue: timerCoordinator)
+        _shortcutManager = StateObject(wrappedValue: ShortcutManager(timerCoordinator: timerCoordinator))
 
-        Task { @MainActor [timerStore, preferencesStore, updateManager] in
-            Self.setupSystemObservers(timerStore: timerStore, preferencesStore: preferencesStore)
+        Task { @MainActor [timerCoordinator, preferencesStore, updateManager] in
+            Self.setupSystemObservers(timerCoordinator: timerCoordinator, preferencesStore: preferencesStore)
             try? await Task.sleep(nanoseconds: 2_000_000_000)
             updateManager.checkForUpdatesIfNeeded()
         }
     }
 
     @MainActor
-    private static func setupSystemObservers(timerStore: TimerStore, preferencesStore: PreferencesStore) {
+    private static func setupSystemObservers(timerCoordinator: TimerCoordinator, preferencesStore: PreferencesStore) {
         let nc = NSWorkspace.shared.notificationCenter
 
-        nc.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak timerStore, weak preferencesStore] _ in
+        nc.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak timerCoordinator, weak preferencesStore] _ in
             Task { @MainActor in
-                guard let timerStore, let preferencesStore, preferencesStore.pauseOnScreenLocked else { return }
-                timerStore.systemPause()
+                guard let timerCoordinator, let preferencesStore, preferencesStore.pauseOnScreenLocked else { return }
+                timerCoordinator.systemPause()
             }
         }
 
-        nc.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak timerStore, weak preferencesStore] _ in
+        nc.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak timerCoordinator, weak preferencesStore] _ in
             Task { @MainActor in
-                guard let timerStore, let preferencesStore, preferencesStore.resumeOnRelogin else { return }
-                timerStore.systemResume()
+                guard let timerCoordinator, let preferencesStore, preferencesStore.resumeOnRelogin else { return }
+                timerCoordinator.systemResume()
             }
         }
 
         let dnc = DistributedNotificationCenter.default()
 
-        dnc.addObserver(forName: NSNotification.Name("com.apple.screenIsLocked"), object: nil, queue: .main) { [weak timerStore, weak preferencesStore] _ in
+        dnc.addObserver(forName: NSNotification.Name("com.apple.screenIsLocked"), object: nil, queue: .main) { [weak timerCoordinator, weak preferencesStore] _ in
             Task { @MainActor in
-                guard let timerStore, let preferencesStore, preferencesStore.pauseOnScreenLocked else { return }
-                timerStore.systemPause()
+                guard let timerCoordinator, let preferencesStore, preferencesStore.pauseOnScreenLocked else { return }
+                timerCoordinator.systemPause()
             }
         }
 
-        dnc.addObserver(forName: NSNotification.Name("com.apple.screenIsUnlocked"), object: nil, queue: .main) { [weak timerStore, weak preferencesStore] _ in
+        dnc.addObserver(forName: NSNotification.Name("com.apple.screenIsUnlocked"), object: nil, queue: .main) { [weak timerCoordinator, weak preferencesStore] _ in
             Task { @MainActor in
-                guard let timerStore, let preferencesStore, preferencesStore.resumeOnRelogin else { return }
-                timerStore.systemResume()
+                guard let timerCoordinator, let preferencesStore, preferencesStore.resumeOnRelogin else { return }
+                timerCoordinator.systemResume()
             }
         }
     }
 
     var body: some Scene {
         MenuBarExtra {
-            MenuBarView(timerStore: timerStore, preferencesStore: preferencesStore)
+            MenuBarView(timerCoordinator: timerCoordinator, preferencesStore: preferencesStore)
         } label: {
-            StatusBarLabelView(
-                presentation: timerStore.statusPresentation,
-                countdownProgress: timerStore.countdownProgress
-            )
+            StatusBarLabelView(timerCoordinator: timerCoordinator)
         }
         .menuBarExtraStyle(.menu)
 
         Window("History", id: HistoryWindow.id) {
-            HistoryView(historyStore: historyStore, timerStore: timerStore)
+            HistoryView(historyStore: historyStore, timerCoordinator: timerCoordinator)
         }
 
         Window("About JustAboutTime", id: AboutWindow.id) {
@@ -99,18 +100,58 @@ enum AboutWindow {
 }
 
 private struct StatusBarLabelView: View {
-    let presentation: TimerStatusPresentation
-    let countdownProgress: CountdownProgressPresentation?
+    @ObservedObject var timerCoordinator: TimerCoordinator
+
+    var body: some View {
+        StatusBarTimerContentView(
+            primaryTimer: timerCoordinator.primaryTimer,
+            secondaryTimer: timerCoordinator.secondaryTimer,
+            isSecondaryActivated: timerCoordinator.isSecondaryActivated
+        )
+    }
+}
+
+private struct StatusBarTimerContentView: View {
+    @ObservedObject var primaryTimer: TimerStore
+    @ObservedObject var secondaryTimer: TimerStore
+    let isSecondaryActivated: Bool
 
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Image(nsImage: StatusBarLabelImageRenderer.image(
-            presentation: presentation,
-            countdownProgress: countdownProgress,
+            primaryPresentation: primaryTimer.statusPresentation,
+            primaryProgress: primaryTimer.countdownProgress,
+            secondaryPresentation: isSecondaryActivated ? secondaryTimer.statusPresentation : nil,
+            secondaryProgress: isSecondaryActivated ? secondaryTimer.countdownProgress : nil,
             colorScheme: colorScheme
         ))
-            .accessibilityLabel(presentation.text)
+            .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var accessibilityLabel: String {
+        var descriptions = [timerDescription(primaryTimer, role: .primary)]
+        if isSecondaryActivated {
+            descriptions.append(timerDescription(secondaryTimer, role: .secondary))
+        }
+        return descriptions.joined(separator: ". ")
+    }
+
+    private func timerDescription(_ timer: TimerStore, role: TimerRole) -> String {
+        let state: String
+        if let session = timer.activeSession {
+            switch session.phase {
+            case .runningCountdown, .runningCountUp:
+                state = "running"
+            case .pausedCountdown, .pausedCountUp:
+                state = "paused"
+            }
+        } else if timer.latestEvent == .countdownCompleted {
+            state = "completed"
+        } else {
+            state = "idle"
+        }
+        return "\(role.displayName) timer \(state), \(timer.statusText)"
     }
 }
 
@@ -122,60 +163,121 @@ private enum StatusBarLabelImageRenderer {
         static let progressHeight = 5.0
         static let progressSpacing = 1.0
         static let progressInset = 1.0
+        static let progressGap = 3.0
+        static let secondarySpacing = 2.0
     }
 
     static func image(
-        presentation: TimerStatusPresentation,
-        countdownProgress: CountdownProgressPresentation?,
+        primaryPresentation: TimerStatusPresentation,
+        primaryProgress: CountdownProgressPresentation?,
+        secondaryPresentation: TimerStatusPresentation?,
+        secondaryProgress: CountdownProgressPresentation?,
         colorScheme: ColorScheme
     ) -> NSImage {
-        let needsOriginalColor = usesSemanticRed(presentation: presentation, countdownProgress: countdownProgress)
+        let isDualTimer = secondaryPresentation != nil
+        let needsOriginalColor = usesOriginalColor(
+            presentation: primaryPresentation,
+            progress: primaryProgress
+        ) || secondaryPresentation.map {
+            usesOriginalColor(presentation: $0, progress: secondaryProgress)
+        } == true
         let primaryColor = needsOriginalColor ? menuBarPrimaryColor(for: colorScheme) : .labelColor
-        let textColor = countdownProgress?.isBlinking == true ? NSColor.systemRed : primaryColor
-        let attributes = textAttributes(foregroundColor: textColor)
-        let textSize = presentation.text.size(withAttributes: attributes)
-        let textRowSize = rowSize(textSize: textSize)
-        let progressHeight = countdownProgress == nil ? 0 : Layout.progressSpacing + Layout.progressHeight
-        let progressWidth = max(34, textRowSize.width)
-        let imageSize = NSSize(width: max(textRowSize.width, progressWidth), height: textRowSize.height + progressHeight)
+        let primaryTextColor = primaryProgress?.isBlinking == true ? NSColor.systemRed : primaryColor
+        let compactFontSize = NSFont.systemFontSize - 2
+        let primaryAttributes = textAttributes(
+            font: NSFont.monospacedDigitSystemFont(
+                ofSize: isDualTimer ? compactFontSize : NSFont.systemFontSize,
+                weight: .regular
+            ),
+            foregroundColor: primaryTextColor
+        )
+        let primaryTextSize = primaryPresentation.text.size(withAttributes: primaryAttributes)
+        let primaryRowSize = rowSize(textSize: primaryTextSize)
+
+        let secondaryAttributes: [NSAttributedString.Key: Any]?
+        let secondaryTextSize: NSSize?
+        if let secondaryPresentation {
+            let secondaryTextColor = secondaryProgress?.isBlinking == true ? NSColor.systemRed : primaryColor
+            let attributes = textAttributes(
+                font: NSFont.monospacedDigitSystemFont(ofSize: compactFontSize, weight: .regular),
+                foregroundColor: secondaryTextColor
+            )
+            secondaryAttributes = attributes
+            secondaryTextSize = secondaryPresentation.text.size(withAttributes: attributes)
+        } else {
+            secondaryAttributes = nil
+            secondaryTextSize = nil
+        }
+
+        let dualCellWidth = secondaryTextSize.map {
+            max(34, max(primaryTextSize.width, $0.width) + Layout.secondarySpacing * 2)
+        }
+        let combinedRowWidth = dualCellWidth.map {
+            $0 * 2 + Layout.progressGap
+        } ?? primaryRowSize.width
+        let textRowHeight = max(primaryRowSize.height, secondaryTextSize?.height ?? 0)
+        let hasProgress = primaryProgress != nil || secondaryProgress != nil
+        let progressHeight = hasProgress ? Layout.progressSpacing + Layout.progressHeight : 0
+        let progressWidth = max(34, combinedRowWidth)
+        let imageSize = NSSize(width: max(combinedRowWidth, progressWidth), height: textRowHeight + progressHeight)
         let image = NSImage(size: imageSize)
         image.isTemplate = !needsOriginalColor
 
         image.lockFocus()
         defer { image.unlockFocus() }
 
-        let rowOriginX = (imageSize.width - textRowSize.width) / 2
-        let textOrigin = NSPoint(x: rowOriginX + Layout.dotDiameter + Layout.dotSpacing, y: progressHeight)
-        let isLeadingRed = presentation.dotPhase == .leadingRed
-        let isTrailingRed = presentation.dotPhase == .trailingRed
-
-        drawLeadingIndicator(
-            presentation.dotPhase,
-            color: isLeadingRed ? .systemRed : textColor,
-            in: NSRect(
-                x: rowOriginX,
-                y: progressHeight + (textRowSize.height - Layout.dotDiameter) / 2,
-                width: Layout.dotDiameter,
-                height: Layout.dotDiameter
+        let rowOriginX = (imageSize.width - combinedRowWidth) / 2
+        if let secondaryPresentation, let secondaryAttributes, let secondaryTextSize, let dualCellWidth {
+            drawDualTextRow(
+                primaryText: primaryPresentation.text,
+                primaryAttributes: primaryAttributes,
+                primaryTextSize: primaryTextSize,
+                secondaryText: secondaryPresentation.text,
+                secondaryAttributes: secondaryAttributes,
+                secondaryTextSize: secondaryTextSize,
+                cellWidth: dualCellWidth,
+                rowOriginX: rowOriginX,
+                rowHeight: textRowHeight,
+                progressHeight: progressHeight
             )
-        )
-
-        presentation.text.draw(at: textOrigin, withAttributes: attributes)
-
-        drawDot(
-            isVisible: presentation.dotPhase == .trailing || isTrailingRed,
-            color: isTrailingRed ? .systemRed : primaryColor,
-            in: NSRect(
-                x: textOrigin.x + textSize.width + Layout.dotSpacing,
-                y: progressHeight + (textRowSize.height - Layout.dotDiameter) / 2,
-                width: Layout.dotDiameter,
-                height: Layout.dotDiameter
+        } else {
+            drawStatusRow(
+                presentation: primaryPresentation,
+                attributes: primaryAttributes,
+                textSize: primaryTextSize,
+                rowSize: primaryRowSize,
+                rowOriginX: rowOriginX,
+                rowHeight: textRowHeight,
+                progressHeight: progressHeight,
+                primaryColor: primaryColor,
+                textColor: primaryTextColor
             )
-        )
+        }
 
-        if let countdownProgress {
+        if secondaryPresentation != nil {
+            let barWidth = (progressWidth - Layout.progressGap) / 2
+            if let primaryProgress {
+                drawProgress(
+                    primaryProgress,
+                    primaryColor: primaryColor,
+                    in: NSRect(x: 0, y: 0, width: barWidth, height: Layout.progressHeight)
+                )
+            }
+            if let secondaryProgress {
+                drawProgress(
+                    secondaryProgress,
+                    primaryColor: primaryColor,
+                    in: NSRect(
+                        x: barWidth + Layout.progressGap,
+                        y: 0,
+                        width: barWidth,
+                        height: Layout.progressHeight
+                    )
+                )
+            }
+        } else if let primaryProgress {
             drawProgress(
-                countdownProgress,
+                primaryProgress,
                 primaryColor: primaryColor,
                 in: NSRect(x: 0, y: 0, width: progressWidth, height: Layout.progressHeight)
             )
@@ -191,26 +293,100 @@ private enum StatusBarLabelImageRenderer {
         )
     }
 
-    private static func usesSemanticRed(
+    private static func usesOriginalColor(
         presentation: TimerStatusPresentation,
-        countdownProgress: CountdownProgressPresentation?
+        progress: CountdownProgressPresentation?
     ) -> Bool {
         presentation.dotPhase == .leadingRed ||
             presentation.dotPhase == .trailingRed ||
-            countdownProgress?.isWarning == true ||
-            countdownProgress?.isBlinking == true ||
-            countdownProgress?.fillStyle.requiresOriginalColor == true
+            progress?.isWarning == true ||
+            progress?.isBlinking == true ||
+            progress?.fillStyle.requiresOriginalColor == true
     }
 
     private static func menuBarPrimaryColor(for colorScheme: ColorScheme) -> NSColor {
         colorScheme == .dark ? .white : .black
     }
 
-    private static func textAttributes(foregroundColor: NSColor) -> [NSAttributedString.Key: Any] {
+    private static func textAttributes(
+        font: NSFont,
+        foregroundColor: NSColor
+    ) -> [NSAttributedString.Key: Any] {
         [
-            .font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular),
+            .font: font,
             .foregroundColor: foregroundColor
         ]
+    }
+
+    private static func drawStatusRow(
+        presentation: TimerStatusPresentation,
+        attributes: [NSAttributedString.Key: Any],
+        textSize: NSSize,
+        rowSize: NSSize,
+        rowOriginX: CGFloat,
+        rowHeight: CGFloat,
+        progressHeight: CGFloat,
+        primaryColor: NSColor,
+        textColor: NSColor
+    ) {
+        let rowOriginY = progressHeight + (rowHeight - rowSize.height) / 2
+        let indicatorY = rowOriginY + (rowSize.height - Layout.dotDiameter) / 2
+        let textOrigin = NSPoint(
+            x: rowOriginX + Layout.dotDiameter + Layout.dotSpacing,
+            y: rowOriginY
+        )
+        let isLeadingRed = presentation.dotPhase == .leadingRed
+        let isTrailingRed = presentation.dotPhase == .trailingRed
+
+        drawLeadingIndicator(
+            presentation.dotPhase,
+            color: isLeadingRed ? .systemRed : textColor,
+            in: NSRect(
+                x: rowOriginX,
+                y: indicatorY,
+                width: Layout.dotDiameter,
+                height: Layout.dotDiameter
+            )
+        )
+
+        presentation.text.draw(at: textOrigin, withAttributes: attributes)
+
+        drawDot(
+            isVisible: presentation.dotPhase == .trailing || isTrailingRed,
+            color: isTrailingRed ? .systemRed : primaryColor,
+            in: NSRect(
+                x: textOrigin.x + textSize.width + Layout.dotSpacing,
+                y: indicatorY,
+                width: Layout.dotDiameter,
+                height: Layout.dotDiameter
+            )
+        )
+    }
+
+    private static func drawDualTextRow(
+        primaryText: String,
+        primaryAttributes: [NSAttributedString.Key: Any],
+        primaryTextSize: NSSize,
+        secondaryText: String,
+        secondaryAttributes: [NSAttributedString.Key: Any],
+        secondaryTextSize: NSSize,
+        cellWidth: CGFloat,
+        rowOriginX: CGFloat,
+        rowHeight: CGFloat,
+        progressHeight: CGFloat
+    ) {
+        let primaryOrigin = NSPoint(
+            x: rowOriginX + (cellWidth - primaryTextSize.width) / 2,
+            y: progressHeight + (rowHeight - primaryTextSize.height) / 2
+        )
+        let secondaryCellOriginX = rowOriginX + cellWidth + Layout.progressGap
+        let secondaryOrigin = NSPoint(
+            x: secondaryCellOriginX + (cellWidth - secondaryTextSize.width) / 2,
+            y: progressHeight + (rowHeight - secondaryTextSize.height) / 2
+        )
+
+        primaryText.draw(at: primaryOrigin, withAttributes: primaryAttributes)
+        secondaryText.draw(at: secondaryOrigin, withAttributes: secondaryAttributes)
     }
 
     private static func drawDot(isVisible: Bool, color: NSColor = .labelColor, in rect: NSRect) {

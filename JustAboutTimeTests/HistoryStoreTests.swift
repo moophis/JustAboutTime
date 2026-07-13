@@ -48,6 +48,42 @@ struct HistoryStoreTests {
         ])
     }
 
+    @Test func completedCountdownRecordsTimerRole() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let fileURL = directoryURL.appendingPathComponent("history.json")
+        let store = HistoryStore(fileURL: fileURL)
+
+        #expect(store.recordCompletedCountdown(
+            timerRole: .secondary,
+            presetDuration: 300,
+            startedAt: Date(timeIntervalSinceReferenceDate: 100),
+            completedAt: Date(timeIntervalSinceReferenceDate: 400)
+        ).isSuccess)
+
+        #expect(store.loadEntries().first?.timerRole == .secondary)
+    }
+
+    @Test func legacyHistoryWithoutTimerRoleLoadsAsPrimary() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let fileURL = directoryURL.appendingPathComponent("history.json")
+        let legacyJSON = """
+        [
+          {
+            "id": "00000000-0000-0000-0000-000000000020",
+            "presetDuration": 300,
+            "startedAt": 100,
+            "completedAt": 400
+          }
+        ]
+        """
+        try Data(legacyJSON.utf8).write(to: fileURL)
+
+        let store = HistoryStore(fileURL: fileURL)
+
+        #expect(store.latestLoadError == nil)
+        #expect(store.entries.first?.timerRole == .primary)
+    }
+
     @Test func loadResultSurfacesUnreadableHistory() throws {
         let directoryURL = try makeTemporaryDirectory()
         let fileURL = directoryURL.appendingPathComponent("history.json")

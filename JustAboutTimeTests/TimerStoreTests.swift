@@ -176,6 +176,7 @@ struct TimerStoreTests {
         let sleeper = TestSleeper()
         let store = TimerStore(
             historyStore: makeIsolatedHistoryStore(),
+            preferencesStore: makeIsolatedPreferencesStore(),
             now: { clock.now },
             sleep: sleeper.sleep(for:)
         )
@@ -314,6 +315,7 @@ struct TimerStoreTests {
         let sleeper = TestSleeper()
         let store = TimerStore(
             historyStore: makeIsolatedHistoryStore(),
+            preferencesStore: makeIsolatedPreferencesStore(),
             now: { clock.now },
             sleep: sleeper.sleep(for:)
         )
@@ -362,7 +364,7 @@ struct TimerStoreTests {
 
         #expect(store.latestEvent == .countdownCompleted)
         #expect(store.activeSession?.mode == .countUp)
-        #expect(store.statusPresentation.text == "00:02")
+        #expect(store.statusPresentation.text == "00:01")
         #expect([DotPhase.leadingRed, .trailingRed].contains(store.statusPresentation.dotPhase))
         let overdueProgress = try #require(store.countdownProgress)
         #expect(overdueProgress.fractionComplete == 1)
@@ -374,7 +376,7 @@ struct TimerStoreTests {
 
         clock.advance(by: 1)
         await sleeper.resumeOnce()
-        while store.statusPresentation.text != "00:03" {
+        while store.statusPresentation.text != "00:02" {
             await Task.yield()
         }
 
@@ -425,8 +427,9 @@ struct TimerStoreTests {
         let registry = TestShortcutRegistry()
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
         let store = TimerStore(historyStore: makeIsolatedHistoryStore(), now: { clock.now })
+        let coordinator = makeTimerCoordinator(primaryTimer: store)
         let manager = ShortcutManager(
-            timerStore: store,
+            timerCoordinator: coordinator,
             client: .init(onKeyUp: { name, handler in
                 registry.register(handler: handler, for: name)
             })
@@ -473,8 +476,9 @@ struct TimerStoreTests {
             now: { clock.now },
             sleep: sleeper.sleep(for:)
         )
+        let coordinator = makeTimerCoordinator(primaryTimer: store)
         let manager = ShortcutManager(
-            timerStore: store,
+            timerCoordinator: coordinator,
             client: .init(onKeyUp: { name, handler in
                 registry.register(handler: handler, for: name)
             })
@@ -519,6 +523,7 @@ struct TimerStoreTests {
         let store = TimerStore(
             historyStore: makeIsolatedHistoryStore(),
             notificationManager: notificationManager,
+            preferencesStore: makeIsolatedPreferencesStore(),
             now: { clock.now },
             sleep: sleeper.sleep(for:)
         )
@@ -539,8 +544,8 @@ struct TimerStoreTests {
         let request = try #require(await center.requests.first)
 
         #expect(store.latestEvent == .countdownCompleted)
-        #expect(request.title == "Countdown Complete")
-        #expect(request.body == "Your 1m countdown finished.")
+        #expect(request.title == "Primary Countdown Complete")
+        #expect(request.body == "Your 1m 30s primary countdown finished.")
     }
 
     @MainActor
@@ -551,6 +556,7 @@ struct TimerStoreTests {
         let store = TimerStore(
             historyStore: makeIsolatedHistoryStore(),
             notificationManager: notificationManager,
+            preferencesStore: makeIsolatedPreferencesStore(),
             now: { clock.now }
         )
 
@@ -628,6 +634,7 @@ struct TimerStoreTests {
         let entry = try #require(entries.first)
 
         #expect(entries.count == 1)
+        #expect(entry.timerRole == .primary)
         #expect(entry.presetDuration == 90)
         #expect(entry.startedAt == Date(timeIntervalSinceReferenceDate: 1_000))
         #expect(entry.completedAt == Date(timeIntervalSinceReferenceDate: 1_090))
@@ -639,7 +646,11 @@ struct TimerStoreTests {
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
         let directoryURL = try makeTemporaryDirectory()
         let historyStore = HistoryStore(fileURL: directoryURL.appendingPathComponent("history.json"))
-        let store = TimerStore(historyStore: historyStore, now: { clock.now })
+        let store = TimerStore(
+            historyStore: historyStore,
+            preferencesStore: makeIsolatedPreferencesStore(),
+            now: { clock.now }
+        )
 
         store.startCountdown(duration: 90)
         clock.advance(by: 95)
@@ -658,7 +669,11 @@ struct TimerStoreTests {
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
         let directoryURL = try makeTemporaryDirectory()
         let historyStore = HistoryStore(fileURL: directoryURL.appendingPathComponent("history.json"))
-        let store = TimerStore(historyStore: historyStore, now: { clock.now })
+        let store = TimerStore(
+            historyStore: historyStore,
+            preferencesStore: makeIsolatedPreferencesStore(),
+            now: { clock.now }
+        )
 
         store.startCountdown(duration: 90)
         clock.advance(by: 95)
@@ -682,7 +697,11 @@ struct TimerStoreTests {
         let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
         let directoryURL = try makeTemporaryDirectory()
         let historyStore = HistoryStore(fileURL: directoryURL.appendingPathComponent("history.json"))
-        let store = TimerStore(historyStore: historyStore, now: { clock.now })
+        let store = TimerStore(
+            historyStore: historyStore,
+            preferencesStore: makeIsolatedPreferencesStore(),
+            now: { clock.now }
+        )
 
         store.startCountdown(duration: 90)
         clock.advance(by: 95)
@@ -730,6 +749,7 @@ struct TimerStoreTests {
         let store = TimerStore(
             historyStore: makeIsolatedHistoryStore(),
             notificationManager: notificationManager,
+            preferencesStore: makeIsolatedPreferencesStore(),
             now: { clock.now }
         )
 
@@ -746,8 +766,8 @@ struct TimerStoreTests {
         let request = try #require(await center.requests.first)
 
         #expect(store.latestEvent == .countdownCompleted)
-        #expect(request.title == "Countdown Complete")
-        #expect(request.body == "Your 1m countdown finished.")
+        #expect(request.title == "Primary Countdown Complete")
+        #expect(request.body == "Your 1m 30s primary countdown finished.")
         #expect(store.activeSession?.mode == .countdown(duration: 90))
     }
 
@@ -759,6 +779,7 @@ struct TimerStoreTests {
         let store = TimerStore(
             historyStore: makeIsolatedHistoryStore(),
             notificationManager: notificationManager,
+            preferencesStore: makeIsolatedPreferencesStore(),
             now: { clock.now }
         )
 
@@ -775,8 +796,8 @@ struct TimerStoreTests {
         let request = try #require(await center.requests.first)
 
         #expect(store.latestEvent == .countdownCompleted)
-        #expect(request.title == "Countdown Complete")
-        #expect(request.body == "Your 1m countdown finished.")
+        #expect(request.title == "Primary Countdown Complete")
+        #expect(request.body == "Your 1m 30s primary countdown finished.")
         #expect(store.activeSession == nil)
     }
 
@@ -787,7 +808,11 @@ struct TimerStoreTests {
         let blockingFileURL = directoryURL.appendingPathComponent("blocked")
         try Data().write(to: blockingFileURL)
         let historyStore = HistoryStore(fileURL: blockingFileURL.appendingPathComponent("history.json"))
-        let store = TimerStore(historyStore: historyStore, now: { clock.now })
+        let store = TimerStore(
+            historyStore: historyStore,
+            preferencesStore: makeIsolatedPreferencesStore(),
+            now: { clock.now }
+        )
 
         store.startCountdown(duration: 1)
         clock.advance(by: 2)
@@ -804,7 +829,11 @@ struct TimerStoreTests {
         let fileURL = directoryURL.appendingPathComponent("history.json")
         try Data("not-json".utf8).write(to: fileURL)
         let historyStore = HistoryStore(fileURL: fileURL)
-        let store = TimerStore(historyStore: historyStore, now: { clock.now })
+        let store = TimerStore(
+            historyStore: historyStore,
+            preferencesStore: makeIsolatedPreferencesStore(),
+            now: { clock.now }
+        )
 
         store.startCountdown(duration: 1)
         clock.advance(by: 2)
@@ -952,11 +981,31 @@ private func makeIsolatedHistoryStore() -> HistoryStore {
     return HistoryStore(fileURL: fileURL)
 }
 
+@MainActor
+private func makeTimerCoordinator(primaryTimer: TimerStore) -> TimerCoordinator {
+    let preferencesStore = PreferencesStore(userDefaults: makeUserDefaults())
+    let secondaryTimer = TimerStore(
+        role: .secondary,
+        historyStore: makeIsolatedHistoryStore(),
+        preferencesStore: preferencesStore
+    )
+    return TimerCoordinator(
+        primaryTimer: primaryTimer,
+        secondaryTimer: secondaryTimer,
+        preferencesStore: preferencesStore
+    )
+}
+
 private func makeUserDefaults() -> UserDefaults {
     let suiteName = "TimerStoreTests.\(UUID().uuidString)"
     let userDefaults = UserDefaults(suiteName: suiteName)!
     userDefaults.removePersistentDomain(forName: suiteName)
     return userDefaults
+}
+
+@MainActor
+private func makeIsolatedPreferencesStore() -> PreferencesStore {
+    PreferencesStore(userDefaults: makeUserDefaults())
 }
 
 private func loadResultFailure(
