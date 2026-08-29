@@ -320,7 +320,7 @@ private struct TimerMenuStatusRows: View {
         Text(statusLine)
             .font(.system(.body, design: .monospaced))
             .padding(.leading, -Layout.menuIconGutterWidth)
-            .accessibilityLabel(unpaddedStatusLine)
+            .accessibilityLabel(statusPresentation.accessibilityText)
 
         progressBar
             .padding(.leading, -Layout.menuIconGutterWidth)
@@ -331,7 +331,18 @@ private struct TimerMenuStatusRows: View {
     }
 
     private var unpaddedStatusLine: String {
-        "\(summaryText) • \(stateText) • \(timerStore.statusText)"
+        statusPresentation.text
+    }
+
+    private var statusPresentation: TimerMenuStatusPresentation {
+        TimerMenuStatusPresentation.make(
+            timerRole: timerStore.role,
+            mode: timerStore.activeSession?.mode,
+            statusText: timerStore.statusText,
+            isRunning: timerStore.activeSession?.isRunning == true,
+            isCompleted: timerStore.isCompleted,
+            isOvertime: timerStore.isOvertime
+        )
     }
 
     private func rightPadded(_ text: String, to characterCount: Int) -> String {
@@ -380,43 +391,6 @@ private struct TimerMenuStatusRows: View {
         return "Progress \(Int((min(1, max(0, progress.fractionComplete)) * 100).rounded())) percent"
     }
 
-    private var summaryText: String {
-        guard let session = timerStore.activeSession else {
-            return "Ready"
-        }
-
-        switch session.mode {
-        case let .countdown(duration):
-            return "Countdown • \(formattedDuration(duration))"
-        case .countUp:
-            return "Count Up"
-        }
-    }
-
-    private var stateText: String {
-        if let session = timerStore.activeSession {
-            return session.isRunning ? "Running" : "Paused"
-        }
-        return timerStore.latestEvent == .countdownCompleted ? "Completed" : "Idle"
-    }
-
-    private func formattedDuration(_ duration: TimeInterval) -> String {
-        let totalSeconds = Int(duration.rounded(.down))
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
-        let seconds = totalSeconds % 60
-
-        if hours > 0 {
-            if seconds > 0 {
-                return minutes > 0 ? "\(hours)h \(minutes)m \(seconds)s" : "\(hours)h \(seconds)s"
-            }
-            return minutes == 0 ? "\(hours)h" : "\(hours)h \(minutes)m"
-        } else if minutes > 0 {
-            return seconds == 0 ? "\(minutes)m" : "\(minutes)m \(seconds)s"
-        } else {
-            return "\(seconds)s"
-        }
-    }
 }
 
 private extension TimerSession {

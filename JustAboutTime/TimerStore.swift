@@ -31,6 +31,14 @@ final class TimerStore: ObservableObject {
         latestHistoryFailure?.error
     }
 
+    var isOvertime: Bool {
+        isCountingUpAfterCountdown
+    }
+
+    var isCompleted: Bool {
+        latestEvent == .countdownCompleted || finishedCountdownDuration != nil
+    }
+
     private var stateMachine = TimerStateMachine()
     private let presenter: StatusBarPresenter
     private let historyStore: HistoryStore

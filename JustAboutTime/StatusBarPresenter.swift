@@ -22,6 +22,79 @@ struct TimerStatusPresentation: Equatable {
     let dotPhase: DotPhase
 }
 
+struct TimerMenuStatusPresentation: Equatable {
+    let text: String
+    let accessibilityText: String
+
+    static func make(
+        timerRole: TimerRole,
+        mode: TimerMode?,
+        statusText: String,
+        isRunning: Bool = false,
+        isCompleted: Bool = false,
+        isOvertime: Bool = false
+    ) -> Self {
+        guard let mode else {
+            let stateText = isCompleted ? "Completed" : "Ready"
+            return Self(
+                text: stateText,
+                accessibilityText: "\(timerRole.displayName) timer, \(stateText.lowercased())."
+            )
+        }
+
+        let activityText = isRunning ? "running" : "paused"
+        let statePrefix = isRunning ? "" : "Paused · "
+
+        switch mode {
+        case let .countdown(duration):
+            let durationText = shortDuration(duration)
+            return Self(
+                text: "\(statePrefix)\(statusText) remaining · \(durationText) countdown",
+                accessibilityText: "\(timerRole.displayName) timer, \(activityText), \(statusText) remaining, \(spokenDuration(duration)) countdown."
+            )
+        case .countUp:
+            let unitText = isOvertime ? "overtime" : "elapsed"
+            return Self(
+                text: "\(statePrefix)\(statusText) \(unitText)",
+                accessibilityText: "\(timerRole.displayName) timer, \(activityText), \(statusText) \(unitText)."
+            )
+        }
+    }
+
+    private static func shortDuration(_ duration: TimeInterval) -> String {
+        let components = durationComponents(duration)
+        var parts = [String]()
+        if components.hours > 0 { parts.append("\(components.hours)h") }
+        if components.minutes > 0 { parts.append("\(components.minutes)m") }
+        if components.seconds > 0 || parts.isEmpty { parts.append("\(components.seconds)s") }
+        return parts.joined(separator: " ")
+    }
+
+    private static func spokenDuration(_ duration: TimeInterval) -> String {
+        let components = durationComponents(duration)
+        var parts = [String]()
+        if components.hours > 0 {
+            parts.append("\(components.hours) \(components.hours == 1 ? "hour" : "hours")")
+        }
+        if components.minutes > 0 {
+            parts.append("\(components.minutes) \(components.minutes == 1 ? "minute" : "minutes")")
+        }
+        if components.seconds > 0 || parts.isEmpty {
+            parts.append("\(components.seconds) \(components.seconds == 1 ? "second" : "seconds")")
+        }
+        return parts.joined(separator: " ")
+    }
+
+    private static func durationComponents(_ duration: TimeInterval) -> (hours: Int, minutes: Int, seconds: Int) {
+        let totalSeconds = max(0, Int(duration.rounded(.down)))
+        return (
+            hours: totalSeconds / 3600,
+            minutes: (totalSeconds % 3600) / 60,
+            seconds: totalSeconds % 60
+        )
+    }
+}
+
 struct StatusBarPresenter {
     func presentation(for snapshot: TimerStatusSnapshot, animationStep: Int) -> TimerStatusPresentation {
         switch snapshot {

@@ -249,7 +249,7 @@ struct JustAboutTimeTests {
         #expect(menuSource.components(separatedBy: ".padding(.leading, -Layout.menuIconGutterWidth)").count == 3)
         #expect(menuSource.contains("static let statusCharacterCount = 40"))
         #expect(menuSource.contains("rightPadded(unpaddedStatusLine, to: Layout.statusCharacterCount)"))
-        #expect(menuSource.contains(".accessibilityLabel(unpaddedStatusLine)"))
+        #expect(menuSource.contains(".accessibilityLabel(statusPresentation.accessibilityText)"))
         #expect(menuSource.contains("static let progressSegmentCount = 24"))
         #expect(menuSource.contains("String(repeating: \"▰\", count: filledCount)"))
         #expect(menuSource.contains("String(repeating: \"▱\", count: Layout.progressSegmentCount - filledCount)"))

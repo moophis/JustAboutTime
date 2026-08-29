@@ -104,6 +104,66 @@ struct TimerStoreTests {
         #expect(paused.dotPhase == .leadingPause)
     }
 
+    @Test func timerMenuStatusPresentationFormatsCountdownStates() {
+        let running = TimerMenuStatusPresentation.make(
+            timerRole: .primary,
+            mode: .countdown(duration: 25 * 60),
+            statusText: "18:42",
+            isRunning: true
+        )
+        let paused = TimerMenuStatusPresentation.make(
+            timerRole: .secondary,
+            mode: .countdown(duration: 3_661),
+            statusText: "59:59",
+            isRunning: false
+        )
+
+        #expect(running.text == "18:42 remaining · 25m countdown")
+        #expect(running.accessibilityText == "Primary timer, running, 18:42 remaining, 25 minutes countdown.")
+        #expect(paused.text == "Paused · 59:59 remaining · 1h 1m 1s countdown")
+        #expect(paused.accessibilityText == "Secondary timer, paused, 59:59 remaining, 1 hour 1 minute 1 second countdown.")
+    }
+
+    @Test func timerMenuStatusPresentationFormatsCountUpStates() {
+        let elapsed = TimerMenuStatusPresentation.make(
+            timerRole: .primary,
+            mode: .countUp,
+            statusText: "12:34",
+            isRunning: true
+        )
+        let pausedOvertime = TimerMenuStatusPresentation.make(
+            timerRole: .secondary,
+            mode: .countUp,
+            statusText: "00:12",
+            isRunning: false,
+            isOvertime: true
+        )
+
+        #expect(elapsed.text == "12:34 elapsed")
+        #expect(elapsed.accessibilityText == "Primary timer, running, 12:34 elapsed.")
+        #expect(pausedOvertime.text == "Paused · 00:12 overtime")
+        #expect(pausedOvertime.accessibilityText == "Secondary timer, paused, 00:12 overtime.")
+    }
+
+    @Test func timerMenuStatusPresentationFormatsIdleAndCompletedStates() {
+        let idle = TimerMenuStatusPresentation.make(
+            timerRole: .primary,
+            mode: nil,
+            statusText: "00:00"
+        )
+        let completed = TimerMenuStatusPresentation.make(
+            timerRole: .secondary,
+            mode: nil,
+            statusText: "00:00",
+            isCompleted: true
+        )
+
+        #expect(idle.text == "Ready")
+        #expect(idle.accessibilityText == "Primary timer, ready.")
+        #expect(completed.text == "Completed")
+        #expect(completed.accessibilityText == "Secondary timer, completed.")
+    }
+
     @MainActor
     @Test func timerStoreStartsIdleAndUpdatesPresentationWhenCountdownStarts() {
         let store = TimerStore(
