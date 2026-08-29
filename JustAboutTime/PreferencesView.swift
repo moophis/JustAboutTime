@@ -57,20 +57,28 @@ private struct GeneralPreferencesView: View {
             }
 
             PreferencesGroup(title: "BEHAVIOR") {
-                Toggle("Open on restart", isOn: $preferencesStore.openOnRestart)
+                Toggle("Launch at Login", isOn: $preferencesStore.openOnRestart)
                     .font(.body.weight(.semibold))
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                Toggle("Pause on screen locked", isOn: $preferencesStore.pauseOnScreenLocked)
+                Toggle("Pause timers when Mac sleeps or locks", isOn: $preferencesStore.pauseOnScreenLocked)
                     .font(.body.weight(.semibold))
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                Toggle("Resume on unlock", isOn: $preferencesStore.resumeOnRelogin)
-                    .font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .disabled(!preferencesStore.pauseOnScreenLocked)
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle("Resume timers after wake or unlock", isOn: $preferencesStore.resumeOnRelogin)
+                        .font(.body.weight(.semibold))
 
-                Toggle("Count up when countdown ends", isOn: $preferencesStore.countUpAfterCountdown)
+                    Text("Only timers paused automatically by JustAboutTime resume automatically.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 20)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 20)
+                .disabled(!preferencesStore.pauseOnScreenLocked)
+
+                Toggle("Continue counting after countdown ends", isOn: $preferencesStore.countUpAfterCountdown)
                     .font(.body.weight(.semibold))
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
