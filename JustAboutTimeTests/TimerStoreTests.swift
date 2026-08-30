@@ -180,6 +180,77 @@ struct TimerStoreTests {
     }
 
     @MainActor
+    @Test func repeatLastTimerIsDisabledUntilATimerStarts() {
+        let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
+            preferencesStore: makeIsolatedPreferencesStore()
+        )
+
+        #expect(store.canRepeatLastTimer == false)
+
+        store.repeatLastTimer()
+
+        #expect(store.activeSession == nil)
+    }
+
+    @MainActor
+    @Test func repeatLastTimerRestartsMostRecentCountdown() {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
+            preferencesStore: makeIsolatedPreferencesStore(),
+            now: { clock.now }
+        )
+
+        store.startCountdown(duration: 90)
+        store.finish()
+        store.repeatLastTimer()
+
+        #expect(store.canRepeatLastTimer)
+        #expect(store.activeSession?.mode == .countdown(duration: 90))
+        #expect(store.activeSession?.phase.isRunning == true)
+        #expect(store.statusPresentation.text == "01:30")
+    }
+
+    @MainActor
+    @Test func repeatLastTimerRestartsMostRecentCountUp() {
+        let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+        let store = TimerStore(
+            historyStore: makeIsolatedHistoryStore(),
+            preferencesStore: makeIsolatedPreferencesStore(),
+            now: { clock.now }
+        )
+
+        store.startCountUp()
+        clock.advance(by: 45)
+        store.finish()
+        store.repeatLastTimer()
+
+        #expect(store.activeSession?.mode == .countUp)
+        #expect(store.activeSession?.phase.isRunning == true)
+        #expect(store.statusPresentation.text == "00:00")
+    }
+
+    @MainActor
+    @Test func repeatLastTimerUsesSecondaryTimerProfile() {
+        let preferencesStore = makeIsolatedPreferencesStore()
+        preferencesStore.setLastTimerType(.countdown(duration: 45), for: .secondary)
+        let store = TimerStore(
+            role: .secondary,
+            historyStore: makeIsolatedHistoryStore(),
+            preferencesStore: preferencesStore,
+            now: { Date(timeIntervalSinceReferenceDate: 1_000) }
+        )
+
+        #expect(store.canRepeatLastTimer)
+
+        store.repeatLastTimer()
+
+        #expect(store.activeSession?.mode == .countdown(duration: 45))
+        #expect(store.statusPresentation.text == "00:45")
+    }
+
+    @MainActor
     @Test func countdownStartUsesSameTimestampForInitialPresentation() {
         let clock = SteppingClock(times: [
             Date(timeIntervalSinceReferenceDate: 1_000),

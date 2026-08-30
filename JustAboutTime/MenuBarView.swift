@@ -42,6 +42,8 @@ struct MenuBarView: View {
 
     @ViewBuilder
     private func timerSection(timer: TimerStore, role: TimerRole) -> some View {
+        repeatLastTimerButton(timer: timer)
+
         if timer.activeSession == nil {
             startActions(timer: timer, role: role)
         } else {
@@ -66,6 +68,16 @@ struct MenuBarView: View {
             }
             .keyboardShortcut("s", modifiers: [.option])
         }
+    }
+
+    private func repeatLastTimerButton(timer: TimerStore) -> some View {
+        Button {
+            timer.repeatLastTimer()
+        } label: {
+            Label("Repeat Last Timer", systemImage: "arrow.clockwise")
+        }
+        .disabled(!timer.canRepeatLastTimer)
+        .keyboardShortcut("l", modifiers: shortcutModifiers(for: timer.role))
     }
 
     @ViewBuilder

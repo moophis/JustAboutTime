@@ -39,6 +39,10 @@ final class TimerStore: ObservableObject {
         latestEvent == .countdownCompleted || finishedCountdownDuration != nil
     }
 
+    var canRepeatLastTimer: Bool {
+        repeatableStartMode != nil
+    }
+
     private var stateMachine = TimerStateMachine()
     private let presenter: StatusBarPresenter
     private let historyStore: HistoryStore
@@ -147,6 +151,13 @@ final class TimerStore: ObservableObject {
         case .pausedCountdown, .pausedCountUp:
             send(.resume(now: currentTime), referenceTime: currentTime)
         }
+    }
+
+    func repeatLastTimer() {
+        wasSystemPaused = false
+        finishedCountdownDuration = nil
+        isCountingUpAfterCountdown = false
+        startMostRecentMode(referenceTime: now())
     }
 
     func pause() {
