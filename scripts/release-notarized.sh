@@ -151,14 +151,19 @@ SPARKLE_ZIP="$BUILD_DIR/$APP_NAME-$VERSION.zip"
 /usr/bin/ditto -c -k --keepParent "$APP_PATH" "$SPARKLE_ZIP"
 
 info "Generating appcast.xml"
-# Remove notary zip to avoid duplicate archive conflict with generate_appcast
 rm -f "$NOTARY_ZIP"
 
 GENERATE_APPCAST=$(find "$ROOT_DIR" ~/Library/Developer/Xcode/DerivedData -path "*/Sparkle/bin/generate_appcast" -type f 2>/dev/null | head -1)
 APPCAST="$BUILD_DIR/appcast.xml"
 if [[ -n "$GENERATE_APPCAST" ]]; then
   if security find-generic-password -a "JustAboutTime" -w &>/dev/null; then
-    "$GENERATE_APPCAST" --account "JustAboutTime" "$BUILD_DIR"
+    APPCAST_INPUT_DIR="$BUILD_DIR/appcast-input"
+    rm -rf "$APPCAST_INPUT_DIR"
+    mkdir -p "$APPCAST_INPUT_DIR"
+    cp "$SPARKLE_ZIP" "$APPCAST_INPUT_DIR/"
+    "$GENERATE_APPCAST" --account "JustAboutTime" "$APPCAST_INPUT_DIR"
+    mv "$APPCAST_INPUT_DIR/appcast.xml" "$APPCAST"
+    rm -rf "$APPCAST_INPUT_DIR"
     if [[ -f "$APPCAST" ]]; then
       info "Appcast generated: $APPCAST"
     else
