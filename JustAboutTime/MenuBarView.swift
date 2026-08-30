@@ -95,20 +95,9 @@ struct MenuBarView: View {
         }
         .keyboardShortcut("r", modifiers: shortcutModifiers(for: role))
 
-        ForEach(Array(preferencesStore.presetDurations(for: role).enumerated()), id: \.offset) { index, duration in
-            Button(indentedCountdownTitle(for: duration)) {
-                timer.startCountdown(duration: duration)
-            }
-            .keyboardShortcut(
-                KeyEquivalent(Character(String(index + 1))),
-                modifiers: shortcutModifiers(for: role)
-            )
-        }
+        startNewTimerMenu(timer: timer, role: role)
 
-        Button("  Count Up") {
-            timer.startCountUp()
-        }
-        .keyboardShortcut("4", modifiers: shortcutModifiers(for: role))
+        Divider()
 
         Button {
             if role == .secondary {
@@ -120,6 +109,27 @@ struct MenuBarView: View {
             Label("Finish", systemImage: "checkmark.circle")
         }
         .keyboardShortcut("f", modifiers: shortcutModifiers(for: role))
+    }
+
+    private func startNewTimerMenu(timer: TimerStore, role: TimerRole) -> some View {
+        Menu {
+            ForEach(Array(preferencesStore.presetDurations(for: role).enumerated()), id: \.offset) { index, duration in
+                Button(formattedDuration(duration) + " Countdown") {
+                    timer.startCountdown(duration: duration)
+                }
+                .keyboardShortcut(
+                    KeyEquivalent(Character(String(index + 1))),
+                    modifiers: shortcutModifiers(for: role)
+                )
+            }
+
+            Button("Count Up") {
+                timer.startCountUp()
+            }
+            .keyboardShortcut("4", modifiers: shortcutModifiers(for: role))
+        } label: {
+            Label("Start New Timer", systemImage: "timer")
+        }
     }
 
     private func pauseButton(timer: TimerStore, role: TimerRole) -> some View {
@@ -183,10 +193,6 @@ struct MenuBarView: View {
 
     private func countdownTitle(for duration: TimeInterval) -> String {
         "Start \(formattedDuration(duration)) Countdown"
-    }
-
-    private func indentedCountdownTitle(for duration: TimeInterval) -> String {
-        "  \(formattedDuration(duration)) Countdown"
     }
 
     private func formattedDuration(_ duration: TimeInterval) -> String {

@@ -240,6 +240,10 @@ struct JustAboutTimeTests {
 
         #expect(menuSource.contains("Label(isRunning ? \"Pause\" : \"Resume\", systemImage: isRunning ? \"pause.fill\" : \"play.fill\")"))
         #expect(menuSource.contains("Button(\"Restart\")"))
+        #expect(menuSource.contains("startNewTimerMenu(timer: timer, role: role)"))
+        #expect(menuSource.contains("Label(\"Start New Timer\", systemImage: \"timer\")"))
+        #expect(menuSource.contains("Button(formattedDuration(duration) + \" Countdown\")"))
+        #expect(menuSource.contains("indentedCountdownTitle") == false)
         #expect(menuSource.contains("Label(\"Finish\", systemImage: \"checkmark.circle\")"))
         #expect(menuSource.contains("Section(\"Primary Timer\") {\n            TimerMenuStatusRows(timerStore: timerCoordinator.primaryTimer)"))
         #expect(menuSource.contains("if timerCoordinator.isSecondaryActivated {\n                TimerMenuStatusRows(timerStore: timerCoordinator.secondaryTimer)"))
