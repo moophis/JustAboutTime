@@ -54,7 +54,7 @@ struct AboutView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
                 Text("JustAboutTime is up to date.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.green)
             }
             Button("Check for Updates\u{2026}") {
                 updateManager.checkForUpdates()

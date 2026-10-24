@@ -65,6 +65,14 @@ override init() {
     func resetStatus() {
         status = .unknown
     }
+
+    nonisolated static func status(for error: Error) -> Status {
+        let error = error as NSError
+        if error.domain == SUSparkleErrorDomain && error.code == SUError.noUpdateError.rawValue {
+            return .upToDate
+        }
+        return .failed(error.localizedDescription)
+    }
 }
 
 extension UpdateManager: SPUUpdaterDelegate {
@@ -82,9 +90,9 @@ extension UpdateManager: SPUUpdaterDelegate {
     }
 
     nonisolated func updater(_ updater: SPUUpdater, didAbortWithError error: Error) {
-        let message = error.localizedDescription
+        let result = Self.status(for: error)
         Task { @MainActor in
-            status = .failed(message)
+            status = result
         }
     }
 
