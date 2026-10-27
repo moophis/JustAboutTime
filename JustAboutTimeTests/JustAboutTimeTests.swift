@@ -1,9 +1,65 @@
 import Testing
 @testable import JustAboutTime
 import Foundation
+import AppKit
 
 struct JustAboutTimeTests {
     struct TestError: Error {}
+
+    @MainActor
+    @Test func statusBarLabelReservesOvertimePrefixForSingleAndDualTimers() {
+        let progress = CountdownProgressPresentation(fractionComplete: 1, isWarning: false)
+        for dual in [false, true] {
+            let sizes = [TimerUrgency.neutral, .warning, .pausedWarning, .overdue].map { urgency in
+                StatusBarLabelImageRenderer.image(
+                    primaryPresentation: TimerStatusPresentation(
+                        text: urgency == .overdue ? "+00:01" : "00:01",
+                        dotPhase: .hidden, urgency: urgency),
+                    primaryProgress: progress,
+                    secondaryPresentation: dual ? TimerStatusPresentation(text: "00:30", dotPhase: .hidden) : nil,
+                    secondaryProgress: dual ? progress : nil,
+                    colorScheme: .light,
+                    primaryPillOpacity: urgency.opacity
+                ).size
+            }
+            #expect(sizes.allSatisfy { $0 == sizes[0] })
+        }
+    }
+
+    @MainActor
+    @Test func statusBarLabelKeepsEnlargedDigitsWithinStatusBarHeight() {
+        let progress = CountdownProgressPresentation(fractionComplete: 0.5, isWarning: false)
+        let mmss = StatusBarLabelImageRenderer.image(
+            primaryPresentation: TimerStatusPresentation(text: "04:52", dotPhase: .hidden),
+            primaryProgress: progress,
+            secondaryPresentation: nil,
+            secondaryProgress: nil,
+            colorScheme: .light
+        )
+        let overdue = StatusBarLabelImageRenderer.image(
+            primaryPresentation: TimerStatusPresentation(text: "+01:04:52", dotPhase: .hidden, urgency: .overdue),
+            primaryProgress: progress,
+            secondaryPresentation: nil,
+            secondaryProgress: nil,
+            colorScheme: .light,
+            primaryPillOpacity: 1
+        )
+        let dual = StatusBarLabelImageRenderer.image(
+            primaryPresentation: TimerStatusPresentation(text: "04:52", dotPhase: .hidden),
+            primaryProgress: progress,
+            secondaryPresentation: TimerStatusPresentation(text: "+01:04:52", dotPhase: .hidden, urgency: .overdue),
+            secondaryProgress: progress,
+            colorScheme: .light,
+            primaryPillOpacity: 0.1,
+            secondaryPillOpacity: 1
+        )
+
+        #expect(StatusBarLabelImageRenderer.timerFontSize == NSFont.systemFontSize - 1)
+        #expect(mmss.size.height <= 22)
+        #expect(overdue.size.height == mmss.size.height)
+        #expect(dual.size.height == mmss.size.height)
+        #expect(overdue.size.width > mmss.size.width)
+    }
 
     @Test func countdownStartsWithCorrectTarget() {
         let now = Date(timeIntervalSinceReferenceDate: 1_000)
@@ -291,18 +347,17 @@ struct JustAboutTimeTests {
         #expect(appSource.contains("colorScheme == .dark ? .white : .black"))
         #expect(appSource.contains("primaryPresentation: TimerStatusPresentation"))
         #expect(appSource.contains("secondaryPresentation: TimerStatusPresentation?"))
-        #expect(appSource.contains("let isDualTimer = secondaryPresentation != nil"))
-        #expect(appSource.contains("ofSize: isDualTimer ? compactFontSize : NSFont.systemFontSize"))
+        #expect(appSource.contains("ofSize: compactFontSize"))
         #expect(appSource.contains("NSFont.monospacedDigitSystemFont(ofSize: compactFontSize, weight: .regular)"))
         #expect(appSource.contains("NSFont.monospacedDigitSystemFont(ofSize: compactFontSize, weight: .semibold)" ) == false)
         #expect(appSource.contains("$0 * 2 + Layout.progressGap"))
-        #expect(appSource.contains("drawDualTextRow("))
+        #expect(appSource.contains("drawPill(opacity: primaryPillOpacity"))
         #expect(appSource.contains("secondaryTextSize = secondaryPresentation.text.size(withAttributes: attributes)"))
-        #expect(appSource.contains("secondaryText: secondaryPresentation.text"))
-        #expect(appSource.contains("secondaryText.draw(at: secondaryOrigin, withAttributes: secondaryAttributes)"))
+        #expect(appSource.contains("drawPill(opacity: secondaryPillOpacity"))
+        #expect(appSource.contains("presentation.text.draw(at: textOrigin, withAttributes: attributes)"))
         #expect(appSource.contains("\"2\".draw(at: secondaryOrigin") == false)
         #expect(appSource.contains("let barWidth = (progressWidth - Layout.progressGap) / 2"))
-        #expect(appSource.contains("progress.isWarning ? NSColor.systemRed : primaryColor"))
+        #expect(appSource.contains("let progressColor = primaryColor"))
         #expect(appSource.contains("drawProgress("))
     }
 

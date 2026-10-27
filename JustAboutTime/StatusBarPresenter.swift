@@ -11,8 +11,6 @@ enum DotPhase: Equatable {
     case hidden
     case leading
     case trailing
-    case leadingRed
-    case trailingRed
     case leadingSquare
     case leadingPause
 }
@@ -20,6 +18,24 @@ enum DotPhase: Equatable {
 struct TimerStatusPresentation: Equatable {
     let text: String
     let dotPhase: DotPhase
+    var urgency: TimerUrgency = .neutral
+}
+
+enum TimerUrgency: Equatable {
+    case neutral, warning, pausedWarning, overdue
+
+    var opacity: Double {
+        switch self {
+        case .neutral: return 0
+        case .warning, .pausedWarning: return 0.1
+        case .overdue: return 1
+        }
+    }
+
+    func opacity(at elapsed: TimeInterval, reduceMotion: Bool) -> Double {
+        guard self == .warning, !reduceMotion else { return opacity }
+        return 0.1 + 0.075 * (1 - cos(2 * .pi * elapsed / 3))
+    }
 }
 
 struct TimerMenuStatusPresentation: Equatable {
@@ -103,15 +119,17 @@ struct StatusBarPresenter {
         case let .countdown(remaining, isRunning, isWarning):
             return TimerStatusPresentation(
                 text: format(remaining),
-                dotPhase: countdownDotPhase(isRunning: isRunning, isWarning: isWarning, animationStep: animationStep)
+                dotPhase: countdownDotPhase(isRunning: isRunning, isWarning: isWarning, animationStep: animationStep),
+                urgency: isWarning ? (isRunning ? .warning : .pausedWarning) : .neutral
             )
         case let .countUp(elapsed, isRunning, isOverdue):
             return TimerStatusPresentation(
-                text: format(elapsed),
-                dotPhase: countUpDotPhase(isRunning: isRunning, isOverdue: isOverdue, animationStep: animationStep)
+                text: (isOverdue ? "+" : "") + format(elapsed),
+                dotPhase: countUpDotPhase(isRunning: isRunning, isOverdue: isOverdue, animationStep: animationStep),
+                urgency: isOverdue ? .overdue : .neutral
             )
         case .countdownCompleted:
-            return TimerStatusPresentation(text: "00:00", dotPhase: .leadingSquare)
+            return TimerStatusPresentation(text: "00:00", dotPhase: .leadingSquare, urgency: .overdue)
         }
     }
 
@@ -136,7 +154,7 @@ struct StatusBarPresenter {
             return dotPhase(isRunning: isRunning, animationStep: animationStep)
         }
 
-        return redAlternatingDotPhase(animationStep: animationStep)
+        return .hidden
     }
 
     private func countUpDotPhase(isRunning: Bool, isOverdue: Bool, animationStep: Int) -> DotPhase {
@@ -148,7 +166,7 @@ struct StatusBarPresenter {
             return dotPhase(isRunning: isRunning, animationStep: animationStep)
         }
 
-        return redAlternatingDotPhase(animationStep: animationStep)
+        return .hidden
     }
 
     private func dotPhase(isRunning: Bool, animationStep: Int) -> DotPhase {
@@ -159,7 +177,4 @@ struct StatusBarPresenter {
         return animationStep.isMultiple(of: 2) ? .leading : .hidden
     }
 
-    private func redAlternatingDotPhase(animationStep: Int) -> DotPhase {
-        animationStep.isMultiple(of: 2) ? .leadingRed : .trailingRed
-    }
 }

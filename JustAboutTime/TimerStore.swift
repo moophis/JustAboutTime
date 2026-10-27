@@ -347,8 +347,8 @@ final class TimerStore: ObservableObject {
         CountdownProgressPresentation(
             fractionComplete: 1.0,
             isWarning: true,
-            isBlinking: true,
-            isFillVisible: animationStep.isMultiple(of: 2)
+            isBlinking: false,
+            isFillVisible: true
         )
     }
 
