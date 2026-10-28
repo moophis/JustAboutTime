@@ -8,3 +8,4 @@ build/
 .worktrees/
 derived-data/
 .pi/
+qa-artifacts/

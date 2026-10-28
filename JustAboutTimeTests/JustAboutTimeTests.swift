@@ -54,7 +54,7 @@ struct JustAboutTimeTests {
             secondaryPillOpacity: 1
         )
 
-        #expect(StatusBarLabelImageRenderer.timerFontSize == NSFont.systemFontSize - 1)
+        #expect(StatusBarLabelImageRenderer.timerFontSize == NSFont.systemFontSize)
         #expect(mmss.size.height <= 22)
         #expect(overdue.size.height == mmss.size.height)
         #expect(dual.size.height == mmss.size.height)

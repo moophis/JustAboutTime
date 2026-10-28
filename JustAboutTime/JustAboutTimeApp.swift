@@ -195,11 +195,11 @@ enum StatusBarLabelImageRenderer {
         static let progressInset = 1.0
         static let progressGap = 3.0
         static let secondarySpacing = 5.0
-        static let pillVerticalPadding = 1.5
+        static let pillVerticalPadding = 1.0
     }
 
-    // One point below the native system size keeps the enlarged digits within the status-bar height.
-    static let timerFontSize = NSFont.systemFontSize - 1
+    // Match the native system size while keeping the existing compact row layout.
+    static let timerFontSize = NSFont.systemFontSize
 
     static func image(
         primaryPresentation: TimerStatusPresentation,
