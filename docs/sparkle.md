@@ -8,6 +8,7 @@ JustAboutTime uses Sparkle 2.8.1 for macOS update detection, download, signature
 - `Info.plist` sets `SUFeedURL` to `https://github.com/moophis/JustAboutTime/releases/latest/download/appcast.xml`.
 - `Info.plist` reads `SUPublicEDKey` from the `SPARKLE_PUBLIC_ED_KEY` build setting.
 - The About window exposes manual update checks plus persisted automatic check/download toggles.
+- Settings → Updates exposes manual checks and automatic check/download switches, sharing the same persisted preferences as About. Automatic checks default to on; turning them off disables launch and scheduled checks and the background download switch without disabling manual checks.
 
 ## Release Requirements
 

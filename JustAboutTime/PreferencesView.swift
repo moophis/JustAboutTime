@@ -22,6 +22,11 @@ struct PreferencesView: View {
                 .tabItem {
                     Label("Notifications", systemImage: "bell")
                 }
+
+            UpdatesPreferencesView()
+                .tabItem {
+                    Label("Updates", systemImage: "arrow.triangle.2.circlepath")
+                }
         }
         .frame(minWidth: 520, minHeight: 420)
     }
@@ -82,6 +87,7 @@ private struct GeneralPreferencesView: View {
                     .font(.body.weight(.semibold))
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
+
         }
     }
 
@@ -99,6 +105,32 @@ private struct GeneralPreferencesView: View {
             }
         )
     }
+}
+
+private struct UpdatesPreferencesView: View {
+  @EnvironmentObject private var updateManager: UpdateManager
+
+  var body: some View {
+    PreferencesPage {
+      PreferencesGroup(title: "UPDATES") {
+        Button("Check for Updates\u{2026}") {
+          updateManager.checkForUpdates()
+        }
+        .disabled(updateManager.isBusy)
+
+        Divider()
+
+        Toggle("Check for updates automatically", isOn: $updateManager.automaticallyChecksForUpdates)
+          .toggleStyle(.switch)
+          .frame(maxWidth: .infinity, alignment: .leading)
+
+        Toggle("Download updates in background", isOn: $updateManager.automaticallyDownloadsUpdates)
+          .toggleStyle(.switch)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .disabled(!updateManager.automaticallyChecksForUpdates)
+      }
+    }
+  }
 }
 
 private struct ShortcutPreferencesView: View {

@@ -87,6 +87,7 @@ struct JustAboutTimeApp: App {
 
         Settings {
             PreferencesView(preferencesStore: preferencesStore, notificationManager: notificationManager)
+                .environmentObject(updateManager)
         }
     }
 }
