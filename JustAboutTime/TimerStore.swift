@@ -398,7 +398,7 @@ final class TimerStore: ObservableObject {
         }
 
         if finishedCountdownDuration != nil {
-            return .countdownCompleted
+            return .idle
         }
 
         return .idle
