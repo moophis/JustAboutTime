@@ -863,8 +863,9 @@ struct TimerStoreTests {
 
         let entry = try #require(historyStore.loadEntries().first)
 
-        #expect(store.latestEvent == .countdownCompleted)
+        #expect(store.latestEvent == nil)
         #expect(store.activeSession == nil)
+        #expect(store.statusPresentation.urgency == .neutral)
         #expect(entry.presetDuration == 90)
         #expect(entry.startedAt == Date(timeIntervalSinceReferenceDate: 1_000))
         #expect(entry.completedAt == Date(timeIntervalSinceReferenceDate: 1_095))
@@ -949,10 +950,45 @@ struct TimerStoreTests {
 
         let request = try #require(await center.requests.first)
 
-        #expect(store.latestEvent == .countdownCompleted)
+        #expect(store.latestEvent == nil)
         #expect(request.title == "Primary Countdown Complete")
         #expect(request.body == "Your 1m 30s primary countdown finished.")
         #expect(store.activeSession == nil)
+    }
+
+    @MainActor
+    @Test(arguments: [false, true], [false, true])
+    func finishClearsOverdueUrgency(countUpAfterCountdown: Bool, tickBeforeFinish: Bool) async throws {
+      let clock = TestClock(now: Date(timeIntervalSinceReferenceDate: 1_000))
+      let sleeper = TestSleeper()
+      let preferences = makeIsolatedPreferencesStore()
+      preferences.countUpAfterCountdown = countUpAfterCountdown
+      let history = makeIsolatedHistoryStore()
+      let store = TimerStore(
+        historyStore: history,
+        preferencesStore: preferences,
+        now: { clock.now },
+        sleep: sleeper.sleep(for:)
+      )
+
+      store.startCountdown(duration: 1)
+      clock.advance(by: 2)
+      if tickBeforeFinish {
+        await sleeper.resumeOnce()
+        while store.latestEvent == nil {
+          await Task.yield()
+        }
+        #expect(store.statusPresentation.urgency == .overdue)
+      }
+
+      store.finish()
+
+      #expect(store.activeSession == nil)
+      #expect(store.latestEvent == nil)
+      #expect(store.statusPresentation.urgency == .neutral)
+      #expect(store.statusPresentation.text == "00:00")
+      #expect(store.countdownProgress?.isWarning == false)
+      #expect(history.loadEntries().count == 1)
     }
 
     @MainActor

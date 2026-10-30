@@ -194,6 +194,8 @@ final class TimerStore: ObservableObject {
         isCountingUpAfterCountdown = false
         let currentTime = now()
         send(.finish(now: currentTime), referenceTime: currentTime)
+        latestEvent = nil
+        synchronizePresentation(referenceTime: currentTime)
     }
 
     func deactivate() {
@@ -226,7 +228,11 @@ final class TimerStore: ObservableObject {
     private func send(_ action: TimerStateMachine.Action, referenceTime: Date) {
         let previousSession = stateMachine.session
         let events = stateMachine.send(action)
-        handleCountdownCompletion(previousSession: previousSession, events: events, referenceTime: referenceTime)
+        if case .finish = action {
+            // Finishing acknowledges completion instead of starting an overdue count-up.
+        } else {
+            handleCountdownCompletion(previousSession: previousSession, events: events, referenceTime: referenceTime)
+        }
         persistHistoryIfNeeded(previousSession: previousSession, events: events, completedAt: referenceTime)
         notifyIfNeeded(previousSession: previousSession, events: events)
         synchronizePresentation(referenceTime: referenceTime, events: events)
