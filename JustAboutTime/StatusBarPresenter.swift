@@ -11,6 +11,8 @@ enum DotPhase: Equatable {
     case hidden
     case leading
     case trailing
+    case leadingRed
+    case trailingRed
     case leadingSquare
     case leadingPause
 }
@@ -124,7 +126,7 @@ struct StatusBarPresenter {
             )
         case let .countUp(elapsed, isRunning, isOverdue):
             return TimerStatusPresentation(
-                text: (isOverdue ? "+" : "") + format(elapsed),
+                text: format(elapsed),
                 dotPhase: countUpDotPhase(isRunning: isRunning, isOverdue: isOverdue, animationStep: animationStep),
                 urgency: isOverdue ? .overdue : .neutral
             )
@@ -154,19 +156,16 @@ struct StatusBarPresenter {
             return dotPhase(isRunning: isRunning, animationStep: animationStep)
         }
 
-        return .hidden
+        return redAlternatingDotPhase(animationStep: animationStep)
     }
 
     private func countUpDotPhase(isRunning: Bool, isOverdue: Bool, animationStep: Int) -> DotPhase {
+        // Count-up is elapsed time, not a deadline: it never rotates the indicator.
+        // Keep the ordinary running blink even when the associated countdown is overdue.
         guard isRunning else {
             return .leadingPause
         }
-
-        guard isOverdue else {
-            return dotPhase(isRunning: isRunning, animationStep: animationStep)
-        }
-
-        return .hidden
+        return dotPhase(isRunning: true, animationStep: animationStep)
     }
 
     private func dotPhase(isRunning: Bool, animationStep: Int) -> DotPhase {
@@ -175,6 +174,10 @@ struct StatusBarPresenter {
         }
 
         return animationStep.isMultiple(of: 2) ? .leading : .hidden
+    }
+
+    private func redAlternatingDotPhase(animationStep: Int) -> DotPhase {
+        animationStep.isMultiple(of: 2) ? .leadingRed : .trailingRed
     }
 
 }

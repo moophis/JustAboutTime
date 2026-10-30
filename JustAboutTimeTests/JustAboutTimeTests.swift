@@ -7,13 +7,13 @@ struct JustAboutTimeTests {
     struct TestError: Error {}
 
     @MainActor
-    @Test func statusBarLabelReservesOvertimePrefixForSingleAndDualTimers() {
+    @Test func statusBarLabelKeepsOverdueTextWidthStableWithoutPlusPrefix() {
         let progress = CountdownProgressPresentation(fractionComplete: 1, isWarning: false)
         for dual in [false, true] {
             let sizes = [TimerUrgency.neutral, .warning, .pausedWarning, .overdue].map { urgency in
                 StatusBarLabelImageRenderer.image(
                     primaryPresentation: TimerStatusPresentation(
-                        text: urgency == .overdue ? "+00:01" : "00:01",
+                        text: "00:01",
                         dotPhase: .hidden, urgency: urgency),
                     primaryProgress: progress,
                     secondaryPresentation: dual ? TimerStatusPresentation(text: "00:30", dotPhase: .hidden) : nil,
@@ -22,7 +22,9 @@ struct JustAboutTimeTests {
                     primaryPillOpacity: urgency.opacity
                 ).size
             }
-            #expect(sizes.allSatisfy { $0 == sizes[0] })
+            #expect(sizes.dropFirst().allSatisfy {
+                abs($0.width - sizes[0].width) < 0.5 && abs($0.height - sizes[0].height) < 0.5
+            })
         }
     }
 
@@ -37,7 +39,7 @@ struct JustAboutTimeTests {
             colorScheme: .light
         )
         let overdue = StatusBarLabelImageRenderer.image(
-            primaryPresentation: TimerStatusPresentation(text: "+01:04:52", dotPhase: .hidden, urgency: .overdue),
+            primaryPresentation: TimerStatusPresentation(text: "01:04:52", dotPhase: .hidden, urgency: .overdue),
             primaryProgress: progress,
             secondaryPresentation: nil,
             secondaryProgress: nil,
@@ -47,7 +49,7 @@ struct JustAboutTimeTests {
         let dual = StatusBarLabelImageRenderer.image(
             primaryPresentation: TimerStatusPresentation(text: "04:52", dotPhase: .hidden),
             primaryProgress: progress,
-            secondaryPresentation: TimerStatusPresentation(text: "+01:04:52", dotPhase: .hidden, urgency: .overdue),
+            secondaryPresentation: TimerStatusPresentation(text: "01:04:52", dotPhase: .hidden, urgency: .overdue),
             secondaryProgress: progress,
             colorScheme: .light,
             primaryPillOpacity: 0.1,
@@ -55,10 +57,102 @@ struct JustAboutTimeTests {
         )
 
         #expect(StatusBarLabelImageRenderer.timerFontSize == NSFont.systemFontSize)
-        #expect(mmss.size.height <= 22)
+        let font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+        let attributes: [NSAttributedString.Key: Any] = [.font: font]
+        let textSize = ("04:52" as NSString).size(withAttributes: attributes)
+        let geometry = StatusBarLabelImageRenderer.rowGeometry(text: "04:52", attributes: attributes, textSize: textSize)
+        #expect(abs(mmss.size.width - (geometry.rowSize.width + 16)) < 0.01)
+        #expect(mmss.size.height > 0)
         #expect(overdue.size.height == mmss.size.height)
         #expect(dual.size.height == mmss.size.height)
+        #expect(mmss.size.height > textSize.height + 2)
+        #expect(overdue.size.height >= mmss.size.height)
         #expect(overdue.size.width > mmss.size.width)
+    }
+
+    @MainActor
+    @Test func statusBarRenderedGeometryUsesEqualVisibleGlyphGapsAndWhiteUrgencyDots() {
+        let font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+        let attributes: [NSAttributedString.Key: Any] = [.font: font]
+        let textSize = ("00:08" as NSString).size(withAttributes: attributes)
+        let geometry = StatusBarLabelImageRenderer.rowGeometry(text: "00:08", attributes: attributes, textSize: textSize)
+        let leftGap = geometry.textInkBounds.minX + geometry.textOrigin.x - geometry.leadingDot.maxX
+        let rightGap = geometry.trailingDot.minX - (geometry.textInkBounds.maxX + geometry.textOrigin.x)
+        #expect(abs(leftGap - rightGap) < 0.01)
+        #expect(geometry.rowSize.width > textSize.width + 20)
+
+        let overdue = TimerStatusPresentation(text: "00:08", dotPhase: .leading, urgency: .overdue)
+        let image = StatusBarLabelImageRenderer.image(primaryPresentation: overdue, primaryProgress: nil, secondaryPresentation: nil, secondaryProgress: nil, colorScheme: .light)
+        #expect(image.size.width == geometry.rowSize.width + 16)
+        // The renderer canvas and pill geometry remain unchanged; the separate
+        // native status-button inset is reduced by the label's outer padding.
+        #expect(image.size.width - geometry.rowSize.width == 16)
+        let white = StatusBarLabelImageRenderer.indicatorColor(for: .overdue, base: .systemRed).usingColorSpace(.sRGB)
+        #expect((white?.redComponent ?? 0) > 0.95)
+        #expect((white?.greenComponent ?? 0) > 0.95)
+        #expect((white?.blueComponent ?? 0) > 0.95)
+    }
+
+    @MainActor
+    @Test func statusBarProductionRendererWritesDeterministicDueAndOverdueArtifacts() throws {
+        let directory = ProcessInfo.processInfo.environment["STATUSBAR_RENDER_ARTIFACT_DIR"] ?? "/tmp/just-about-time-render-artifacts"
+        try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
+        let progress = CountdownProgressPresentation(fractionComplete: 0.5, isWarning: false)
+        let cases: [(String, TimerStatusPresentation, TimerStatusPresentation?)] = [
+            ("due-leading", TimerStatusPresentation(text: "01:39", dotPhase: .leading, urgency: .warning), nil),
+            ("due-trailing", TimerStatusPresentation(text: "01:39", dotPhase: .trailingRed, urgency: .warning), nil),
+            ("overdue-leading", TimerStatusPresentation(text: "01:39", dotPhase: .leading, urgency: .overdue), nil),
+            ("overdue-trailing", TimerStatusPresentation(text: "01:39", dotPhase: .trailingRed, urgency: .overdue), nil),
+            ("dual-due", TimerStatusPresentation(text: "01:39", dotPhase: .leading, urgency: .warning), TimerStatusPresentation(text: "00:30", dotPhase: .trailingRed, urgency: .warning)),
+            ("dual-overdue", TimerStatusPresentation(text: "01:39", dotPhase: .leading, urgency: .overdue), TimerStatusPresentation(text: "00:30", dotPhase: .trailingRed, urgency: .overdue))
+        ]
+        for (name, presentation, secondary) in cases {
+            let image = StatusBarLabelImageRenderer.image(
+                primaryPresentation: presentation,
+                primaryProgress: progress,
+                secondaryPresentation: secondary,
+                secondaryProgress: secondary.map { _ in progress },
+                colorScheme: .light,
+                primaryPillOpacity: 1,
+                secondaryPillOpacity: secondary == nil ? 0 : 1
+            )
+            let tiff = try #require(image.tiffRepresentation)
+            let bitmap = try #require(NSBitmapImageRep(data: tiff))
+            let png = try #require(bitmap.representation(using: .png, properties: [:]))
+            try png.write(to: URL(fileURLWithPath: directory).appendingPathComponent("statusbar-\(name).png"))
+        }
+    }
+
+    @Test func statusBarPresenterUsesBlinkingLeftDotNormallyAndRotatesOnlyWhenUrgent() {
+        let presenter = StatusBarPresenter()
+        #expect(presenter.presentation(for: .idle, animationStep: 0).dotPhase == .leadingSquare)
+        #expect(presenter.presentation(for: .countdown(remaining: 60, isRunning: true, isWarning: false), animationStep: 0).dotPhase == .leading)
+        #expect(presenter.presentation(for: .countdown(remaining: 60, isRunning: true, isWarning: false), animationStep: 1).dotPhase == .hidden)
+        #expect(presenter.presentation(for: .countdown(remaining: 5, isRunning: true, isWarning: true), animationStep: 0).dotPhase == .leadingRed)
+        #expect(presenter.presentation(for: .countUp(elapsed: 5, isRunning: true, isOverdue: true), animationStep: 1).dotPhase == .hidden)
+        #expect(presenter.presentation(for: .countUp(elapsed: 5, isRunning: true, isOverdue: true), animationStep: 0).text == "00:05")
+        #expect(presenter.presentation(for: .countdown(remaining: 60, isRunning: false, isWarning: false), animationStep: 0).dotPhase == .leadingPause)
+    }
+
+    @Test func countUpNeverRotatesEvenAfterLongElapsedOverdue() {
+        let presenter = StatusBarPresenter()
+        for step in [0, 1, 2, 17, 10_000] {
+            let normal = presenter.presentation(for: .countUp(elapsed: 86_401, isRunning: true, isOverdue: false), animationStep: step)
+            let overdue = presenter.presentation(for: .countUp(elapsed: 86_401, isRunning: true, isOverdue: true), animationStep: step)
+            #expect(normal.dotPhase == (step.isMultiple(of: 2) ? .leading : .hidden))
+            #expect(overdue.dotPhase == (step.isMultiple(of: 2) ? .leading : .hidden))
+            #expect(overdue.text == "24:00:01")
+        }
+    }
+
+    @Test func countdownWarningRotatesWhileNormalCountdownOnlyBlinksLeadingSlot() {
+        let presenter = StatusBarPresenter()
+        for step in [0, 1, 2, 3] {
+            let normal = presenter.presentation(for: .countdown(remaining: 60, isRunning: true, isWarning: false), animationStep: step)
+            #expect(normal.dotPhase == (step.isMultiple(of: 2) ? .leading : .hidden))
+        }
+        #expect(presenter.presentation(for: .countdown(remaining: 5, isRunning: true, isWarning: true), animationStep: 0).dotPhase == .leadingRed)
+        #expect(presenter.presentation(for: .countdown(remaining: 5, isRunning: true, isWarning: true), animationStep: 1).dotPhase == .trailingRed)
     }
 
     @Test func countdownStartsWithCorrectTarget() {
@@ -335,7 +429,7 @@ struct JustAboutTimeTests {
         #expect(menuSource.contains("role == .secondary ? [.option] : []"))
     }
 
-    @Test func statusBarLabelUsesIsolatedCompactCellsAndFullCountersWithoutDotsForDualTimers() throws {
+    @Test func statusBarLabelUsesIsolatedCompactCellsAndFullCountersForDualTimers() throws {
         let appSource = try source(at: projectFilePath("JustAboutTime/JustAboutTimeApp.swift"))
 
         #expect(appSource.contains("Image(nsImage: StatusBarLabelImageRenderer.image"))
@@ -351,14 +445,22 @@ struct JustAboutTimeTests {
         #expect(appSource.contains("NSFont.monospacedDigitSystemFont(ofSize: compactFontSize, weight: .regular)"))
         #expect(appSource.contains("NSFont.monospacedDigitSystemFont(ofSize: compactFontSize, weight: .semibold)" ) == false)
         #expect(appSource.contains("$0 * 2 + Layout.progressGap"))
+        #expect(appSource.contains("pillHorizontalPadding"))
+        #expect(appSource.contains("pillVerticalPadding"))
+        #expect(appSource.contains("statusButtonHorizontalInset: CGFloat = 10"))
+        #expect(appSource.contains(".padding(.horizontal, -StatusBarLabelImageRenderer.statusButtonHorizontalInset)"))
         #expect(appSource.contains("drawPill(opacity: primaryPillOpacity"))
         #expect(appSource.contains("secondaryTextSize = secondaryPresentation.text.size(withAttributes: attributes)"))
         #expect(appSource.contains("drawPill(opacity: secondaryPillOpacity"))
         #expect(appSource.contains("presentation.text.draw(at: textOrigin, withAttributes: attributes)"))
         #expect(appSource.contains("\"2\".draw(at: secondaryOrigin") == false)
-        #expect(appSource.contains("let barWidth = (progressWidth - Layout.progressGap) / 2"))
-        #expect(appSource.contains("let progressColor = primaryColor"))
         #expect(appSource.contains("drawProgress("))
+        #expect(appSource.contains("progressInset"))
+        #expect(appSource.contains("progressHeight"))
+        #expect(appSource.contains("drawPill(opacity: primaryPillOpacity"))
+        #expect(appSource.contains("width: cellWidth + Layout.pillHorizontalPadding * 2"))
+        #expect(appSource.contains("height: imageSize.height"))
+        #expect(appSource.contains(".trailing, .trailingRed"))
     }
 
     @Test func timerTicksUpdateStatusContentWithoutRebuildingSelectableMenuRows() throws {

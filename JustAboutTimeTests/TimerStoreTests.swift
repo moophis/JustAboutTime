@@ -18,9 +18,9 @@ struct TimerStoreTests {
         }
     }
 
-    @Test func overdueHoursKeepPlusPrefixAndCompletedIsUrgent() {
+    @Test func overdueHoursKeepRenderedWidthAndCompletedIsUrgent() {
         let presenter = StatusBarPresenter()
-        #expect(presenter.presentation(for: .countUp(elapsed: 3661, isRunning: false, isOverdue: true), animationStep: 0).text == "+01:01:01")
+        #expect(presenter.presentation(for: .countUp(elapsed: 3661, isRunning: false, isOverdue: true), animationStep: 0).text == "01:01:01")
         #expect(presenter.presentation(for: .countdownCompleted, animationStep: 0).urgency == .overdue)
         #expect(presenter.presentation(for: .idle, animationStep: 0).urgency == .neutral)
     }
@@ -91,10 +91,10 @@ struct TimerStoreTests {
         )
 
         #expect(leading.text == "00:10")
-        #expect(leading.dotPhase == .hidden)
+        #expect(leading.dotPhase == .leadingRed)
         #expect(leading.urgency == .warning)
         #expect(trailing.text == "00:09")
-        #expect(trailing.dotPhase == .hidden)
+        #expect(trailing.dotPhase == .trailingRed)
         #expect(paused.urgency == .pausedWarning)
         #expect(paused.dotPhase == .leadingPause)
     }
@@ -111,17 +111,17 @@ struct TimerStoreTests {
         #expect(trailing.dotPhase == .leadingSquare)
     }
 
-    @Test func statusBarPresenterUsesOverduePillAndPlusPrefix() {
+    @Test func statusBarPresenterKeepsCountUpStableWhenOverdue() {
         let presenter = StatusBarPresenter()
 
         let leading = presenter.presentation(for: .countUp(elapsed: 2, isRunning: true, isOverdue: true), animationStep: 0)
         let trailing = presenter.presentation(for: .countUp(elapsed: 3, isRunning: true, isOverdue: true), animationStep: 1)
         let paused = presenter.presentation(for: .countUp(elapsed: 4, isRunning: false, isOverdue: true), animationStep: 2)
 
-        #expect(leading.text == "+00:02")
-        #expect(leading.dotPhase == .hidden)
+        #expect(leading.text == "00:02")
+        #expect(leading.dotPhase == .leading)
         #expect(leading.urgency == .overdue)
-        #expect(trailing.text == "+00:03")
+        #expect(trailing.text == "00:03")
         #expect(trailing.dotPhase == .hidden)
         #expect(paused.dotPhase == .leadingPause)
     }
@@ -343,7 +343,7 @@ struct TimerStoreTests {
         }
 
         let firstWarningDotPhase = store.statusPresentation.dotPhase
-        #expect(firstWarningDotPhase == .hidden)
+        #expect(firstWarningDotPhase == .leadingRed || firstWarningDotPhase == .trailingRed)
         #expect(store.statusPresentation.urgency == .warning)
 
         clock.advance(by: 1)
@@ -353,7 +353,7 @@ struct TimerStoreTests {
         }
 
         #expect(store.statusPresentation.urgency == .warning)
-        #expect(store.statusPresentation.dotPhase == firstWarningDotPhase)
+        #expect(store.statusPresentation.dotPhase != firstWarningDotPhase)
     }
 
     @MainActor
@@ -518,7 +518,7 @@ struct TimerStoreTests {
 
         #expect(store.latestEvent == .countdownCompleted)
         #expect(store.activeSession?.mode == .countUp)
-        #expect(store.statusPresentation.text == "+00:01")
+        #expect(store.statusPresentation.text == "00:01")
         #expect(store.statusPresentation.urgency == .overdue)
         let overdueProgress = try #require(store.countdownProgress)
         #expect(overdueProgress.fractionComplete == 1)
@@ -530,13 +530,13 @@ struct TimerStoreTests {
 
         clock.advance(by: 1)
         await sleeper.resumeOnce()
-        while store.statusPresentation.text != "+00:02" {
+        while store.statusPresentation.text != "00:02" {
             await Task.yield()
         }
 
         #expect(store.activeSession?.mode == .countUp)
         #expect(store.statusPresentation.urgency == .overdue)
-        #expect(store.statusPresentation.dotPhase == overdueDotPhase)
+        #expect(store.statusPresentation.dotPhase != overdueDotPhase)
         let nextOverdueProgress = try #require(store.countdownProgress)
         #expect(nextOverdueProgress.fractionComplete == 1)
         #expect(nextOverdueProgress.isWarning)

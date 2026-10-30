@@ -1,4 +1,5 @@
 import AppKit
+import CoreText
 import SwiftUI
 
 @main
@@ -132,6 +133,10 @@ private struct StatusBarTimerContentView: View {
             primaryPillOpacity: primaryPillOpacity,
             secondaryPillOpacity: secondaryPillOpacity
         ))
+            // MenuBarExtra hosts this label in an NSStatusBarButton whose native
+            // content margins otherwise make the clickable/highlighted area wider
+            // than the rendered pill. Keep the image canvas and pill geometry intact.
+            .padding(.horizontal, -StatusBarLabelImageRenderer.statusButtonHorizontalInset)
             .accessibilityLabel(accessibilityLabel)
             .task(id: animationKey(primaryTimer.statusPresentation.urgency)) {
                 await animatePill(primaryTimer.statusPresentation.urgency, opacity: $primaryPillOpacity)
@@ -189,18 +194,25 @@ private struct StatusBarTimerContentView: View {
 enum StatusBarLabelImageRenderer {
     private enum Layout {
         static let dotDiameter = 6.0
-        static let dotSpacing = 4.0
+        static let dotSpacing = 3.0
         static let pauseBarWidth = 2.0
         static let progressHeight = 3.0
         static let progressSpacing = 1.0
         static let progressInset = 1.0
-        static let progressGap = 3.0
-        static let secondarySpacing = 5.0
-        static let pillVerticalPadding = 1.0
+        // Keep each dual pill separated after adding the rounded-end clearance.
+        static let progressGap = 16.0
+        static let secondarySpacing = 2.0
+        // At the track's low y-position, a rounded capsule is narrower than its
+        // bounding rectangle. Extra horizontal clearance keeps both track ends
+        // inside the visible silhouette instead of crossing the lower corners.
+        static let pillHorizontalPadding = 8.0
+        static let pillVerticalPadding = 2.0
     }
 
     // Match the native system size while keeping the existing compact row layout.
     static let timerFontSize = NSFont.systemFontSize
+    // The native MenuBarExtra status button contributes this inset on each side.
+    static let statusButtonHorizontalInset: CGFloat = 10
 
     static func image(
         primaryPresentation: TimerStatusPresentation,
@@ -228,9 +240,9 @@ enum StatusBarLabelImageRenderer {
             foregroundColor: primaryTextColor
         )
         let primaryTextSize = primaryPresentation.text.size(withAttributes: primaryAttributes)
-        // Reserve the overtime prefix before the deadline so urgency does not move adjacent items.
-        let primaryLayoutSize = reservedTextSize(primaryPresentation.text, attributes: primaryAttributes)
-        let primaryRowSize = rowSize(textSize: primaryLayoutSize)
+        // Layout from actual glyph bounds. Dot slots remain reserved even when hidden,
+        // so animation changes never move the text or adjacent status items.
+        let primaryRowSize = rowGeometry(text: primaryPresentation.text, attributes: primaryAttributes, textSize: primaryTextSize).rowSize
 
         let secondaryAttributes: [NSAttributedString.Key: Any]?
         let secondaryTextSize: NSSize?
@@ -243,7 +255,7 @@ enum StatusBarLabelImageRenderer {
             )
             secondaryAttributes = attributes
             secondaryTextSize = secondaryPresentation.text.size(withAttributes: attributes)
-            secondaryLayoutSize = reservedTextSize(secondaryPresentation.text, attributes: attributes)
+            secondaryLayoutSize = secondaryTextSize
         } else {
             secondaryAttributes = nil
             secondaryTextSize = nil
@@ -251,7 +263,7 @@ enum StatusBarLabelImageRenderer {
         }
 
         let dualCellWidth = secondaryLayoutSize.map {
-            max(34, max(primaryRowSize.width, rowSize(textSize: $0).width))
+            max(34, max(primaryRowSize.width, rowGeometry(text: secondaryPresentation?.text ?? "", attributes: secondaryAttributes ?? [:], textSize: $0).rowSize.width))
         }
         let combinedRowWidth = dualCellWidth.map {
             $0 * 2 + Layout.progressGap
@@ -259,8 +271,12 @@ enum StatusBarLabelImageRenderer {
         let textRowHeight = max(primaryRowSize.height, secondaryTextSize?.height ?? 0)
         let hasProgress = primaryProgress != nil || secondaryProgress != nil
         let progressHeight = hasProgress ? Layout.progressSpacing + Layout.progressHeight : 0
-        let progressWidth = max(34, combinedRowWidth)
-        let imageSize = NSSize(width: max(combinedRowWidth, progressWidth), height: textRowHeight + progressHeight)
+        // The image and pill enclose one bounded content unit: text row, progress track,
+        // and clearance on every side. This keeps the track from protruding below the pill.
+        let imageSize = NSSize(
+            width: combinedRowWidth + Layout.pillHorizontalPadding * 2,
+            height: textRowHeight + progressHeight + Layout.pillVerticalPadding * 2
+        )
         let image = NSImage(size: imageSize)
         image.isTemplate = !needsOriginalColor
 
@@ -269,9 +285,19 @@ enum StatusBarLabelImageRenderer {
 
         let rowOriginX = (imageSize.width - combinedRowWidth) / 2
         let cellWidth = dualCellWidth ?? combinedRowWidth
-        drawPill(opacity: primaryPillOpacity, in: NSRect(x: rowOriginX, y: 0, width: cellWidth, height: imageSize.height))
+        drawPill(opacity: primaryPillOpacity, in: NSRect(
+            x: rowOriginX - Layout.pillHorizontalPadding,
+            y: 0,
+            width: cellWidth + Layout.pillHorizontalPadding * 2,
+            height: imageSize.height
+        ))
         if secondaryPresentation != nil {
-            drawPill(opacity: secondaryPillOpacity, in: NSRect(x: rowOriginX + cellWidth + Layout.progressGap, y: 0, width: cellWidth, height: imageSize.height))
+            drawPill(opacity: secondaryPillOpacity, in: NSRect(
+                x: rowOriginX + cellWidth + Layout.progressGap - Layout.pillHorizontalPadding,
+                y: 0,
+                width: cellWidth + Layout.pillHorizontalPadding * 2,
+                height: imageSize.height
+            ))
         }
         if let secondaryPresentation, let secondaryAttributes, let secondaryTextSize, let dualCellWidth {
             for (presentation, attributes, textSize, x) in [
@@ -281,7 +307,7 @@ enum StatusBarLabelImageRenderer {
                 drawStatusRow(presentation: presentation, attributes: attributes, textSize: textSize,
                               rowSize: NSSize(width: dualCellWidth, height: textRowHeight), rowOriginX: x,
                               rowHeight: textRowHeight, progressHeight: progressHeight,
-                              primaryColor: primaryColor, textColor: presentation.urgency == .overdue ? .white : primaryColor)
+                              textColor: presentation.urgency == .overdue ? .white : primaryColor)
             }
         } else {
             drawStatusRow(
@@ -292,65 +318,59 @@ enum StatusBarLabelImageRenderer {
                 rowOriginX: rowOriginX,
                 rowHeight: textRowHeight,
                 progressHeight: progressHeight,
-                primaryColor: primaryColor,
                 textColor: primaryTextColor
             )
         }
 
         if secondaryPresentation != nil {
-            let barWidth = (progressWidth - Layout.progressGap) / 2
+            let barWidth = (combinedRowWidth - Layout.progressGap) / 2
             if let primaryProgress {
-                drawProgress(
-                    primaryProgress,
-                    primaryColor: primaryTextColor,
-                    in: NSRect(x: 10, y: 2, width: barWidth - 20, height: Layout.progressHeight)
-                )
+                drawProgress(primaryProgress, primaryColor: primaryTextColor, in: NSRect(x: rowOriginX + Layout.progressInset, y: Layout.pillVerticalPadding + 1, width: barWidth - Layout.progressInset * 2, height: Layout.progressHeight))
             }
             if let secondaryProgress {
-                drawProgress(
-                    secondaryProgress,
-                    primaryColor: secondaryPresentation?.urgency == .overdue ? .white : primaryColor,
-                    in: NSRect(
-                        x: barWidth + Layout.progressGap + 10,
-                        y: 2,
-                        width: barWidth - 20,
-                        height: Layout.progressHeight
-                    )
-                )
+                drawProgress(secondaryProgress, primaryColor: secondaryPresentation?.urgency == .overdue ? .white : primaryColor, in: NSRect(x: rowOriginX + barWidth + Layout.progressGap + Layout.progressInset, y: Layout.pillVerticalPadding + 1, width: barWidth - Layout.progressInset * 2, height: Layout.progressHeight))
             }
         } else if let primaryProgress {
-            drawProgress(
-                primaryProgress,
-                primaryColor: primaryTextColor,
-                in: NSRect(x: 10, y: 2, width: progressWidth - 20, height: Layout.progressHeight)
-            )
+            drawProgress(primaryProgress, primaryColor: primaryTextColor, in: NSRect(x: rowOriginX + Layout.progressInset, y: Layout.pillVerticalPadding + 1, width: combinedRowWidth - Layout.progressInset * 2, height: Layout.progressHeight))
         }
 
         return image
     }
 
-    private static func reservedTextSize(_ text: String, attributes: [NSAttributedString.Key: Any]) -> NSSize {
-        (text.hasPrefix("+") ? text : "+" + text).size(withAttributes: attributes)
+    struct RenderedRowGeometry {
+        let rowSize: NSSize
+        let textInkBounds: NSRect
+        let textOrigin: NSPoint
+        let leadingDot: NSRect
+        let trailingDot: NSRect
     }
 
-    private static func rowSize(textSize: NSSize) -> NSSize {
-        NSSize(
-            width: Layout.dotDiameter * 2 + Layout.dotSpacing * 2 + textSize.width + Layout.secondarySpacing * 2,
-            height: max(Layout.dotDiameter, textSize.height) + Layout.pillVerticalPadding * 2
-        )
+    static func rowGeometry(text: String, attributes: [NSAttributedString.Key: Any], textSize: NSSize) -> RenderedRowGeometry {
+        let line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: attributes))
+        let inkBounds = CTLineGetImageBounds(line, nil)
+        let rowWidth = Layout.secondarySpacing * 2 + Layout.dotDiameter * 2 + Layout.dotSpacing * 2 + inkBounds.width
+        let rowSize = NSSize(width: rowWidth, height: max(Layout.dotDiameter, textSize.height) + Layout.pillVerticalPadding * 2)
+        let textOrigin = NSPoint(x: Layout.secondarySpacing + Layout.dotDiameter + Layout.dotSpacing - inkBounds.minX, y: 0)
+        let leadingDot = NSRect(x: Layout.secondarySpacing, y: 0, width: Layout.dotDiameter, height: Layout.dotDiameter)
+        let trailingDot = NSRect(x: textOrigin.x + inkBounds.maxX + Layout.dotSpacing, y: 0, width: Layout.dotDiameter, height: Layout.dotDiameter)
+        return RenderedRowGeometry(rowSize: rowSize, textInkBounds: inkBounds, textOrigin: textOrigin, leadingDot: leadingDot, trailingDot: trailingDot)
     }
 
     private static func usesOriginalColor(
         presentation: TimerStatusPresentation,
         progress: CountdownProgressPresentation?
     ) -> Bool {
-        presentation.urgency != .neutral ||
-            progress?.fillStyle.requiresOriginalColor == true
+        presentation.urgency != .neutral || progress?.fillStyle.requiresOriginalColor == true
     }
 
     private static func drawPill(opacity: Double, in rect: NSRect) {
-        NSColor(srgbRed: 0.65, green: 0.04, blue: 0.08, alpha: opacity).setFill()
-        NSBezierPath(roundedRect: rect, xRadius: rect.height / 2, yRadius: rect.height / 2).fill()
+        guard let context = NSGraphicsContext.current?.cgContext else { return }
+        context.saveGState()
+        defer { context.restoreGState() }
+        context.setFillColor(NSColor(srgbRed: 0.65, green: 0.04, blue: 0.08, alpha: opacity).cgColor)
+        // Continuous corners match the system status pill rather than semicircular capsule ends.
+        context.addPath(RoundedRectangle(cornerRadius: rect.height / 2, style: .continuous).path(in: rect).cgPath)
+        context.fillPath()
     }
 
     private static func menuBarPrimaryColor(for colorScheme: ColorScheme) -> NSColor {
@@ -375,21 +395,22 @@ enum StatusBarLabelImageRenderer {
         rowOriginX: CGFloat,
         rowHeight: CGFloat,
         progressHeight: CGFloat,
-        primaryColor: NSColor,
         textColor: NSColor
     ) {
-        let rowOriginY = progressHeight + (rowHeight - rowSize.height) / 2
+        let rowOriginY = Layout.pillVerticalPadding + progressHeight + (rowHeight - rowSize.height) / 2
         let indicatorY = rowOriginY + (rowSize.height - Layout.dotDiameter) / 2
+        let geometry = rowGeometry(text: presentation.text, attributes: attributes, textSize: textSize)
+        let rowOffsetX = rowOriginX + (rowSize.width - geometry.rowSize.width) / 2
         let textOrigin = NSPoint(
-            x: rowOriginX + (rowSize.width - textSize.width) / 2,
+            x: rowOffsetX + geometry.textOrigin.x,
             y: rowOriginY + (rowSize.height - textSize.height) / 2
         )
 
         drawLeadingIndicator(
             presentation.dotPhase,
-            color: textColor,
+            color: indicatorColor(for: presentation.urgency, base: textColor),
             in: NSRect(
-                x: rowOriginX + Layout.secondarySpacing,
+                x: rowOffsetX + geometry.leadingDot.minX,
                 y: indicatorY,
                 width: Layout.dotDiameter,
                 height: Layout.dotDiameter
@@ -398,16 +419,55 @@ enum StatusBarLabelImageRenderer {
 
         presentation.text.draw(at: textOrigin, withAttributes: attributes)
 
+        let trailingColor = indicatorColor(for: presentation.urgency, base: textColor)
         drawDot(
-            isVisible: presentation.dotPhase == .trailing,
-            color: primaryColor,
+            isVisible: presentation.dotPhase == .trailing || presentation.dotPhase == .trailingRed,
+            color: trailingColor,
             in: NSRect(
-                x: textOrigin.x + textSize.width + Layout.dotSpacing,
+                x: textOrigin.x + geometry.textInkBounds.maxX + Layout.dotSpacing,
                 y: indicatorY,
                 width: Layout.dotDiameter,
                 height: Layout.dotDiameter
             )
         )
+    }
+
+    private static func drawProgress(_ progress: CountdownProgressPresentation, primaryColor: NSColor, in rect: NSRect) {
+        let outlineRect = rect.insetBy(dx: 0.5, dy: 0.5)
+        let outlinePath = NSBezierPath(roundedRect: outlineRect, xRadius: outlineRect.height / 2, yRadius: outlineRect.height / 2)
+        primaryColor.setStroke()
+        outlinePath.lineWidth = 1
+        outlinePath.stroke()
+        guard progress.isFillVisible else { return }
+        let fillRect = outlineRect.insetBy(dx: Layout.progressInset, dy: 0.5)
+        let fillWidth = fillRect.width * min(1, max(0, progress.fractionComplete))
+        guard fillWidth > 0 else { return }
+        let fillPath = NSBezierPath(roundedRect: NSRect(x: fillRect.minX, y: fillRect.minY, width: fillWidth, height: fillRect.height), xRadius: fillRect.height / 2, yRadius: fillRect.height / 2)
+        switch progress.fillStyle {
+        case .solid:
+            primaryColor.withAlphaComponent(0.75).setFill()
+            fillPath.fill()
+        case .appIconGradient:
+            drawAppIconGradientFill(in: fillPath, rect: fillRect)
+        }
+    }
+
+    private static func drawAppIconGradientFill(in path: NSBezierPath, rect: NSRect) {
+        NSGraphicsContext.saveGraphicsState()
+        defer { NSGraphicsContext.restoreGraphicsState() }
+        path.addClip()
+        appIconGradient.draw(in: rect, angle: 0)
+    }
+
+    private static var appIconGradient: NSGradient {
+        let iconBlue = NSColor(red: 0.22, green: 0.44, blue: 1.0, alpha: 1.0)
+        let iconPink = NSColor(red: 1.0, green: 0.25, blue: 0.82, alpha: 1.0)
+        return NSGradient(colors: [iconBlue, iconPink]) ?? NSGradient(colors: [.systemBlue, .systemPink])!
+    }
+
+    static func indicatorColor(for urgency: TimerUrgency, base: NSColor) -> NSColor {
+        // Indicators stay white in every urgency state; urgency is conveyed by the pill.
+        .white
     }
 
     private static func drawDot(isVisible: Bool, color: NSColor = .labelColor, in rect: NSRect) {
@@ -423,11 +483,15 @@ enum StatusBarLabelImageRenderer {
         switch dotPhase {
         case .leading:
             drawDot(isVisible: true, color: color, in: rect)
+        case .leadingRed:
+            drawDot(isVisible: true, color: .white, in: rect)
         case .leadingSquare:
             drawSquare(color: color, in: rect)
         case .leadingPause:
             drawPauseBars(color: color, in: rect)
-        case .hidden, .trailing:
+        case .trailing, .trailingRed:
+            return
+        case .hidden:
             return
         }
     }
@@ -446,67 +510,13 @@ enum StatusBarLabelImageRenderer {
         NSBezierPath(rect: leftRect).fill()
         NSBezierPath(rect: rightRect).fill()
     }
-
-    private static func drawProgress(_ progress: CountdownProgressPresentation, primaryColor: NSColor, in rect: NSRect) {
-        let outlineRect = rect.insetBy(dx: 0.5, dy: 0.5)
-        let progressColor = primaryColor
-        let outlinePath = NSBezierPath(
-            roundedRect: outlineRect,
-            xRadius: outlineRect.height / 2,
-            yRadius: outlineRect.height / 2
-        )
-
-        progressColor.setStroke()
-        outlinePath.lineWidth = 1
-        outlinePath.stroke()
-
-        guard progress.isFillVisible else {
-            return
-        }
-
-        let fillRect = outlineRect.insetBy(dx: Layout.progressInset, dy: 0.5)
-        let fillWidth = fillRect.width * min(1, max(0, progress.fractionComplete))
-        guard fillWidth > 0 else {
-            return
-        }
-
-        let fillPath = NSBezierPath(
-            roundedRect: NSRect(x: fillRect.minX, y: fillRect.minY, width: fillWidth, height: fillRect.height),
-            xRadius: fillRect.height / 2,
-            yRadius: fillRect.height / 2
-        )
-
-        switch progress.fillStyle {
-        case .solid:
-            progressColor.withAlphaComponent(0.75).setFill()
-            fillPath.fill()
-        case .appIconGradient:
-            drawAppIconGradientFill(in: fillPath, rect: fillRect)
-        }
-    }
-
-    private static func drawAppIconGradientFill(in path: NSBezierPath, rect: NSRect) {
-        NSGraphicsContext.saveGraphicsState()
-        defer { NSGraphicsContext.restoreGraphicsState() }
-
-        path.addClip()
-        appIconGradient.draw(in: rect, angle: 0)
-    }
-
-    private static var appIconGradient: NSGradient {
-        let iconBlue = NSColor(red: 0.22, green: 0.44, blue: 1.0, alpha: 1.0)
-        let iconPink = NSColor(red: 1.0, green: 0.25, blue: 0.82, alpha: 1.0)
-        return NSGradient(colors: [iconBlue, iconPink]) ?? NSGradient(colors: [.systemBlue, .systemPink])!
-    }
 }
 
 private extension ProgressFillStyle {
     var requiresOriginalColor: Bool {
         switch self {
-        case .solid:
-            return false
-        case .appIconGradient:
-            return true
+        case .solid: return false
+        case .appIconGradient: return true
         }
     }
 }
