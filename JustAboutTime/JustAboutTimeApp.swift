@@ -200,13 +200,11 @@ enum StatusBarLabelImageRenderer {
         static let progressSpacing = 1.0
         static let progressInset = 1.0
         // Keep each dual pill separated after adding the rounded-end clearance.
-        static let progressGap = 16.0
+        static let progressGap = 12.0
         static let secondarySpacing = 2.0
-        // At the track's low y-position, a rounded capsule is narrower than its
-        // bounding rectangle. Extra horizontal clearance keeps both track ends
-        // inside the visible silhouette instead of crossing the lower corners.
-        static let pillHorizontalPadding = 8.0
-        static let pillVerticalPadding = 2.0
+        // Keep progress track ends inside the compact rounded corners.
+        static let pillHorizontalPadding = 4.0
+        static let pillVerticalPadding = 1.0
     }
 
     // Match the native system size while keeping the existing compact row layout.
@@ -367,9 +365,8 @@ enum StatusBarLabelImageRenderer {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         context.saveGState()
         defer { context.restoreGState() }
-        context.setFillColor(NSColor(srgbRed: 0.65, green: 0.04, blue: 0.08, alpha: opacity).cgColor)
-        // Continuous corners match the system status pill rather than semicircular capsule ends.
-        context.addPath(RoundedRectangle(cornerRadius: rect.height / 2, style: .continuous).path(in: rect).cgPath)
+        context.setFillColor(NSColor(srgbRed: 1, green: 0.15, blue: 0.12, alpha: opacity).cgColor)
+        context.addPath(RoundedRectangle(cornerRadius: 6, style: .continuous).path(in: rect).cgPath)
         context.fillPath()
     }
 

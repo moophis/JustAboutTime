@@ -6,6 +6,33 @@ import AppKit
 struct JustAboutTimeTests {
     struct TestError: Error {}
 
+  @MainActor
+  @Test func statusBarPillUsesBrightRedCompactRoundedRectangle() throws {
+    let image = StatusBarLabelImageRenderer.image(
+      primaryPresentation: TimerStatusPresentation(text: "00:08", dotPhase: .hidden, urgency: .overdue),
+      primaryProgress: nil,
+      secondaryPresentation: nil,
+      secondaryProgress: nil,
+      colorScheme: .dark,
+      primaryPillOpacity: 1
+    )
+    let tiffRepresentation = try #require(image.tiffRepresentation)
+    let bitmap = try #require(NSBitmapImageRep(data: tiffRepresentation))
+    var fill: NSColor?
+    for y in 0..<bitmap.pixelsHigh {
+      for x in 0..<bitmap.pixelsWide {
+        guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB) else { continue }
+        if color.redComponent > 0.95 && color.greenComponent < 0.3 && color.blueComponent < 0.3 {
+          fill = color
+          break
+        }
+      }
+      if fill != nil { break }
+    }
+    let brightRed = try #require(fill)
+    #expect(brightRed.redComponent > 0.95)
+  }
+
     @MainActor
     @Test func statusBarLabelKeepsOverdueTextWidthStableWithoutPlusPrefix() {
         let progress = CountdownProgressPresentation(fractionComplete: 1, isWarning: false)
@@ -61,11 +88,11 @@ struct JustAboutTimeTests {
         let attributes: [NSAttributedString.Key: Any] = [.font: font]
         let textSize = ("04:52" as NSString).size(withAttributes: attributes)
         let geometry = StatusBarLabelImageRenderer.rowGeometry(text: "04:52", attributes: attributes, textSize: textSize)
-        #expect(abs(mmss.size.width - (geometry.rowSize.width + 16)) < 0.01)
+        #expect(abs(mmss.size.width - (geometry.rowSize.width + 8)) < 0.01)
         #expect(mmss.size.height > 0)
         #expect(overdue.size.height == mmss.size.height)
         #expect(dual.size.height == mmss.size.height)
-        #expect(mmss.size.height > textSize.height + 2)
+        #expect(mmss.size.height >= textSize.height + 2)
         #expect(overdue.size.height >= mmss.size.height)
         #expect(overdue.size.width > mmss.size.width)
     }
@@ -83,14 +110,83 @@ struct JustAboutTimeTests {
 
         let overdue = TimerStatusPresentation(text: "00:08", dotPhase: .leading, urgency: .overdue)
         let image = StatusBarLabelImageRenderer.image(primaryPresentation: overdue, primaryProgress: nil, secondaryPresentation: nil, secondaryProgress: nil, colorScheme: .light)
-        #expect(image.size.width == geometry.rowSize.width + 16)
-        // The renderer canvas and pill geometry remain unchanged; the separate
-        // native status-button inset is reduced by the label's outer padding.
-        #expect(image.size.width - geometry.rowSize.width == 16)
+        #expect(image.size.width == geometry.rowSize.width + 8)
+        #expect(image.size.width - geometry.rowSize.width == 8)
         let white = StatusBarLabelImageRenderer.indicatorColor(for: .overdue, base: .systemRed).usingColorSpace(.sRGB)
         #expect((white?.redComponent ?? 0) > 0.95)
         #expect((white?.greenComponent ?? 0) > 0.95)
         #expect((white?.blueComponent ?? 0) > 0.95)
+    }
+
+    @MainActor
+    @Test func statusBarPillUsesCompactWidthAndContainsProgressTrack() throws {
+        let source = try source(at: projectFilePath("JustAboutTime/JustAboutTimeApp.swift"))
+        #expect(source.contains("RoundedRectangle(cornerRadius: 6, style: .continuous)"))
+        #expect(source.contains("static let pillHorizontalPadding = 4.0"))
+        #expect(source.contains("static let pillVerticalPadding = 1.0"))
+        #expect(source.contains("static let progressGap = 12.0"))
+        #expect(source.contains("Capsule()") == false)
+
+        let progress = CountdownProgressPresentation(fractionComplete: 0.5, isWarning: false)
+        let noProgress = StatusBarLabelImageRenderer.image(
+            primaryPresentation: TimerStatusPresentation(text: "01:39", dotPhase: .leading),
+            primaryProgress: nil, secondaryPresentation: nil, secondaryProgress: nil,
+            colorScheme: .light, primaryPillOpacity: 1
+        )
+        let withProgress = StatusBarLabelImageRenderer.image(
+            primaryPresentation: TimerStatusPresentation(text: "01:39", dotPhase: .leading),
+            primaryProgress: progress, secondaryPresentation: nil, secondaryProgress: nil,
+            colorScheme: .light, primaryPillOpacity: 1
+        )
+        #expect(withProgress.size.width == noProgress.size.width)
+        #expect(withProgress.size.height > noProgress.size.height)
+        #expect(abs(withProgress.size.height - noProgress.size.height - (1 + 3)) < 0.01)
+
+        let dualNoProgress = StatusBarLabelImageRenderer.image(
+            primaryPresentation: TimerStatusPresentation(text: "01:39", dotPhase: .leading, urgency: .warning),
+            primaryProgress: nil,
+            secondaryPresentation: TimerStatusPresentation(text: "00:30", dotPhase: .trailingRed, urgency: .overdue),
+            secondaryProgress: nil,
+            colorScheme: .light,
+            primaryPillOpacity: 1,
+            secondaryPillOpacity: 1
+        )
+        let dualWithProgress = StatusBarLabelImageRenderer.image(
+            primaryPresentation: TimerStatusPresentation(text: "01:39", dotPhase: .leading, urgency: .warning),
+            primaryProgress: progress,
+            secondaryPresentation: TimerStatusPresentation(text: "00:30", dotPhase: .trailingRed, urgency: .overdue),
+            secondaryProgress: progress,
+            colorScheme: .light,
+            primaryPillOpacity: 1,
+            secondaryPillOpacity: 1
+        )
+        #expect(dualNoProgress.size.width > noProgress.size.width)
+        #expect(dualWithProgress.size.width == dualNoProgress.size.width)
+        #expect(abs(dualWithProgress.size.height - dualNoProgress.size.height - (1 + 3)) < 0.01)
+        #expect(dualNoProgress.size == StatusBarLabelImageRenderer.image(
+            primaryPresentation: TimerStatusPresentation(text: "01:39", dotPhase: .leading, urgency: .overdue),
+            primaryProgress: nil,
+            secondaryPresentation: TimerStatusPresentation(text: "00:30", dotPhase: .trailingRed, urgency: .overdue),
+            secondaryProgress: nil,
+            colorScheme: .light,
+            primaryPillOpacity: 1,
+            secondaryPillOpacity: 1
+        ).size)
+
+        for image in [withProgress, dualWithProgress] {
+            let tiff = try #require(image.tiffRepresentation)
+            let bitmap = try #require(NSBitmapImageRep(data: tiff))
+            let centerY = bitmap.pixelsHigh / 2
+            func rowHasAlpha(_ y: Int) -> Bool {
+                (0..<bitmap.pixelsWide).contains {
+                    (bitmap.colorAt(x: $0, y: y)?.alphaComponent ?? 0) > 0.01
+                }
+            }
+            #expect((0..<min(3, bitmap.pixelsHigh)).contains(where: rowHasAlpha))
+            #expect((max(0, bitmap.pixelsHigh - 3)..<bitmap.pixelsHigh).contains(where: rowHasAlpha))
+            #expect((bitmap.colorAt(x: 0, y: centerY)?.alphaComponent ?? 0) > 0.01)
+            #expect((bitmap.colorAt(x: bitmap.pixelsWide - 1, y: centerY)?.alphaComponent ?? 0) > 0.01)
+        }
     }
 
     @MainActor
@@ -121,6 +217,15 @@ struct JustAboutTimeTests {
             let png = try #require(bitmap.representation(using: .png, properties: [:]))
             try png.write(to: URL(fileURLWithPath: directory).appendingPathComponent("statusbar-\(name).png"))
         }
+        let darkNoProgress = StatusBarLabelImageRenderer.image(
+            primaryPresentation: TimerStatusPresentation(text: "01:39", dotPhase: .leading, urgency: .warning),
+            primaryProgress: nil, secondaryPresentation: nil, secondaryProgress: nil,
+            colorScheme: .dark, primaryPillOpacity: 1
+        )
+        let darkTiff = try #require(darkNoProgress.tiffRepresentation)
+        let darkBitmap = try #require(NSBitmapImageRep(data: darkTiff))
+        let darkPNG = try #require(darkBitmap.representation(using: .png, properties: [:]))
+        try darkPNG.write(to: URL(fileURLWithPath: directory).appendingPathComponent("statusbar-dark-no-progress.png"))
     }
 
     @Test func statusBarPresenterUsesBlinkingLeftDotNormallyAndRotatesOnlyWhenUrgent() {
