@@ -588,10 +588,11 @@ struct JustAboutTimeTests {
         #expect(menuSource.contains("@ObservedObject var timerStore: TimerStore") == false)
     }
 
-    @Test func projectKeepsKeyboardShortcutsPackageAndAppIconSetting() throws {
+    @Test func projectKeepsMacOS27CompatibleKeyboardShortcutsPackageAndAppIconSetting() throws {
         let projectSource = try source(at: projectFilePath("JustAboutTime.xcodeproj/project.pbxproj"))
 
         #expect(projectSource.contains("https://github.com/sindresorhus/KeyboardShortcuts.git"))
+        #expect(projectSource.contains("minimumVersion = 3.1.0"))
         #expect(projectSource.contains("Assets.xcassets in Resources"))
         #expect(projectSource.contains("ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon"))
     }
