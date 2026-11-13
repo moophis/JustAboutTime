@@ -6,7 +6,7 @@ struct MenuBarView: View {
     @ObservedObject var timerCoordinator: TimerCoordinator
     @ObservedObject var preferencesStore: PreferencesStore
 
-    @Environment(\.openWindow) private var openWindow
+    @EnvironmentObject private var windows: TimerWindows
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
@@ -162,7 +162,7 @@ struct MenuBarView: View {
     private var historyButton: some View {
         Button {
             activateApp()
-            openWindow(id: HistoryWindow.id)
+            windows.showHistory()
             activateAppOnNextRunLoop()
         } label: {
             Label("Open History…", systemImage: "clock.arrow.circlepath")
@@ -172,7 +172,7 @@ struct MenuBarView: View {
     private var aboutButton: some View {
         Button {
             activateApp()
-            openWindow(id: AboutWindow.id)
+            windows.showAbout()
             activateAppOnNextRunLoop()
         } label: {
             Label("About JustAboutTime", systemImage: "info.circle")

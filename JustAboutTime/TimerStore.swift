@@ -20,6 +20,8 @@ final class TimerStore: ObservableObject {
     }
 
     private(set) var role: TimerRole
+    private(set) var sessionID = UUID()
+    let widgetStateDidChange = PassthroughSubject<Void, Never>()
     @Published private(set) var activeSession: TimerSession?
     @Published private(set) var statusText: String = "00:00"
     @Published private(set) var statusPresentation: TimerStatusPresentation
@@ -89,6 +91,75 @@ final class TimerStore: ObservableObject {
         loadLastTimerType()
     }
 
+    func sharedSnapshot(at now: Date? = nil) -> SharedTimerSnapshot {
+      let now = now ?? self.now()
+      let available = preferencesStore.lastTimerType(for: role) != nil
+      guard let session = activeSession else {
+        let duration = isCompleted ? (finishedCountdownDuration ?? lastCompletedCountdownDuration) : nil
+        return SharedTimerSnapshot(role: role, sessionID: sessionID, state: isCompleted ? .due : .idle, mode: duration.map { .countdown(duration: $0) } ?? .countUp, startedAt: nil, targetDate: nil, frozenSeconds: 0, originalDuration: duration, lastUpdated: now, hasLastTimer: available)
+      }
+      let state: SharedTimerSnapshot.State
+      let anchor: Date
+      let target: Date?
+      let frozen: TimeInterval?
+      switch session.phase {
+      case let .runningCountdown(targetDate):
+        state = .running
+        anchor = session.startedAt
+        target = targetDate
+        frozen = nil
+      case let .pausedCountdown(remaining):
+        state = .paused
+        anchor = session.startedAt
+        target = nil
+        frozen = remaining
+      case let .runningCountUp(startedAt, accumulated):
+        state = isOvertime ? .overdue : .running
+        anchor = startedAt.addingTimeInterval(-accumulated)
+        target = nil
+        frozen = nil
+      case .pausedCountUp:
+        state = isOvertime ? .overdue : .paused
+        anchor = session.startedAt
+        target = nil
+        frozen = session.elapsedTime(at: now)
+      }
+      return SharedTimerSnapshot(role: role, sessionID: sessionID, state: state, mode: session.mode, startedAt: anchor, targetDate: target, frozenSeconds: frozen, originalDuration: session.originalDuration ?? (isOvertime ? lastCompletedCountdownDuration : nil), lastUpdated: now, hasLastTimer: available, sessionStartedAt: session.startedAt)
+    }
+
+    @discardableResult
+    func restoreWidgetSnapshot(_ snapshot: SharedTimerSnapshot) -> Bool {
+      guard snapshot.role == role, snapshot.isValidForRestoration else { return false }
+      let phase: TimerSession.Phase?
+      switch (snapshot.state, snapshot.mode) {
+      case (.running, .countdown):
+        phase = snapshot.targetDate.map { .runningCountdown(targetDate: $0) }
+      case (.paused, .countdown):
+        phase = snapshot.frozenSeconds.map { .pausedCountdown(remaining: $0) }
+      case (.running, .countUp), (.overdue, .countUp):
+        if let frozen = snapshot.frozenSeconds {
+          phase = .pausedCountUp(accumulated: frozen)
+        } else {
+          phase = snapshot.startedAt.map { .runningCountUp(startedAt: $0, accumulated: 0) }
+        }
+      case (.paused, .countUp):
+        phase = snapshot.frozenSeconds.map { .pausedCountUp(accumulated: $0) }
+      default:
+        phase = nil
+      }
+      let session = phase.map {
+        TimerSession(startedAt: snapshot.sessionStartedAt ?? snapshot.startedAt ?? now(), mode: snapshot.mode, phase: $0)
+      }
+      stateMachine = TimerStateMachine(restoring: session)
+      sessionID = snapshot.sessionID
+      isCountingUpAfterCountdown = snapshot.state == .overdue
+      lastCompletedCountdownDuration = isCountingUpAfterCountdown ? snapshot.originalDuration : nil
+      finishedCountdownDuration = snapshot.state == .due ? snapshot.originalDuration : nil
+      latestEvent = snapshot.state == .due ? .countdownCompleted : nil
+      synchronizePresentation(referenceTime: now())
+      return true
+    }
+
     private func loadLastTimerType() {
         guard let lastTimerType = preferencesStore.lastTimerType(for: role) else {
             return
@@ -117,6 +188,7 @@ final class TimerStore: ObservableObject {
     }
 
     func startCountdown(duration: TimeInterval) {
+        sessionID = UUID()
         wasSystemPaused = false
         finishedCountdownDuration = nil
         isCountingUpAfterCountdown = false
@@ -127,6 +199,7 @@ final class TimerStore: ObservableObject {
     }
 
     func startCountUp() {
+        sessionID = UUID()
         wasSystemPaused = false
         finishedCountdownDuration = nil
         isCountingUpAfterCountdown = false
@@ -171,6 +244,7 @@ final class TimerStore: ObservableObject {
     }
 
     func restart() {
+        sessionID = UUID()
         wasSystemPaused = false
         let currentTime = now()
 
@@ -189,6 +263,7 @@ final class TimerStore: ObservableObject {
     }
 
     func finish() {
+        if activeSession != nil || isCompleted { sessionID = UUID() }
         wasSystemPaused = false
         finishedCountdownDuration = stateMachine.session?.originalDuration
         isCountingUpAfterCountdown = false
@@ -196,6 +271,7 @@ final class TimerStore: ObservableObject {
         send(.finish(now: currentTime), referenceTime: currentTime)
         latestEvent = nil
         synchronizePresentation(referenceTime: currentTime)
+        widgetStateDidChange.send()
     }
 
     func deactivate() {
@@ -206,6 +282,7 @@ final class TimerStore: ObservableObject {
         isCountingUpAfterCountdown = false
         animationStep = 0
         synchronizePresentation(referenceTime: now())
+        widgetStateDidChange.send()
     }
 
     func assignRole(_ role: TimerRole) {
@@ -216,6 +293,7 @@ final class TimerStore: ObservableObject {
         guard let repeatableStartMode else {
             return
         }
+        sessionID = UUID()
 
         switch repeatableStartMode {
         case let .countdown(duration):
@@ -236,6 +314,7 @@ final class TimerStore: ObservableObject {
         persistHistoryIfNeeded(previousSession: previousSession, events: events, completedAt: referenceTime)
         notifyIfNeeded(previousSession: previousSession, events: events)
         synchronizePresentation(referenceTime: referenceTime, events: events)
+        widgetStateDidChange.send()
     }
 
     private func handleCountdownCompletion(
@@ -459,6 +538,7 @@ final class TimerStore: ObservableObject {
             persistHistoryIfNeeded(previousSession: previousSession, events: events, completedAt: currentTime)
             notifyIfNeeded(previousSession: previousSession, events: events)
             synchronizePresentation(referenceTime: currentTime, events: events)
+            if !events.isEmpty { widgetStateDidChange.send() }
         }
 
         guard currentTickTaskGeneration == generation else {

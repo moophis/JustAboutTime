@@ -4,12 +4,14 @@ import SwiftUI
 
 @main
 struct JustAboutTimeApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var historyStore: HistoryStore
     @StateObject private var notificationManager: NotificationManager
     @StateObject private var preferencesStore = PreferencesStore()
     @StateObject private var timerCoordinator: TimerCoordinator
     @StateObject private var shortcutManager: ShortcutManager
     @StateObject private var updateManager = UpdateManager()
+    private let windows: TimerWindows
 
     init() {
         let historyStore = HistoryStore()
@@ -20,11 +22,35 @@ struct JustAboutTimeApp: App {
             notificationManager: notificationManager,
             preferencesStore: preferencesStore
         )
+        let updateManager = UpdateManager()
+        let windows = TimerWindows(
+            timerCoordinator: timerCoordinator,
+            preferencesStore: preferencesStore,
+            historyStore: historyStore,
+            updateManager: updateManager
+        )
+        self.windows = windows
+        _updateManager = StateObject(wrappedValue: updateManager)
         _historyStore = StateObject(wrappedValue: historyStore)
         _notificationManager = StateObject(wrappedValue: notificationManager)
         _preferencesStore = StateObject(wrappedValue: preferencesStore)
         _timerCoordinator = StateObject(wrappedValue: timerCoordinator)
         _shortcutManager = StateObject(wrappedValue: ShortcutManager(timerCoordinator: timerCoordinator))
+        NotificationCenter.default.addObserver(forName: .widgetURLRequested, object: nil, queue: .main) { notification in
+            guard let url = notification.object as? URL else { return }
+            Task { @MainActor in
+                timerCoordinator.handleWidgetURL(url)
+                if let role = timerCoordinator.consumeWidgetSetupRequest() {
+                    windows.showControls(for: role)
+                }
+            }
+        }
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil {
+            DistributedNotificationCenter.default().addObserver(forName: SharedTimerSnapshotStore.commandNotificationName, object: nil, queue: .main) { _ in
+                timerCoordinator.consumeWidgetCommand()
+            }
+            timerCoordinator.consumeWidgetCommand()
+        }
 
         Task { @MainActor [timerCoordinator, preferencesStore, updateManager] in
             Self.setupSystemObservers(timerCoordinator: timerCoordinator, preferencesStore: preferencesStore)
@@ -71,20 +97,11 @@ struct JustAboutTimeApp: App {
     var body: some Scene {
         MenuBarExtra {
             MenuBarView(timerCoordinator: timerCoordinator, preferencesStore: preferencesStore)
+                .environmentObject(windows)
         } label: {
             StatusBarLabelView(timerCoordinator: timerCoordinator)
         }
         .menuBarExtraStyle(.menu)
-
-        Window("History", id: HistoryWindow.id) {
-            HistoryView(historyStore: historyStore, timerCoordinator: timerCoordinator)
-        }
-
-        Window("About JustAboutTime", id: AboutWindow.id) {
-            AboutView()
-                .environmentObject(updateManager)
-        }
-        .windowResizability(.contentSize)
 
         Settings {
             PreferencesView(preferencesStore: preferencesStore, notificationManager: notificationManager)
@@ -92,6 +109,17 @@ struct JustAboutTimeApp: App {
         }
     }
 }
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldRestoreState(_ application: NSApplication) -> Bool { false }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { false }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls { NotificationCenter.default.post(name: .widgetURLRequested, object: url) }
+    }
+}
+
+extension Notification.Name { static let widgetURLRequested = Notification.Name("JustAboutTime.widgetURLRequested") }
 
 enum HistoryWindow {
     static let id = "history"
@@ -101,10 +129,178 @@ enum AboutWindow {
     static let id = "about"
 }
 
+enum TimerWindow {
+    static let id = "timer-controls"
+}
+
+// Menu-bar apps must not let SwiftUI choose a default window on activation.
+@MainActor
+final class TimerWindows: ObservableObject {
+  private let timerCoordinator: TimerCoordinator
+  private let preferencesStore: PreferencesStore
+  private let historyStore: HistoryStore
+  private let updateManager: UpdateManager
+  private var controls: NSWindow?
+  private var history: NSWindow?
+  private var about: NSWindow?
+
+  init(timerCoordinator: TimerCoordinator, preferencesStore: PreferencesStore,
+       historyStore: HistoryStore, updateManager: UpdateManager) {
+    self.timerCoordinator = timerCoordinator
+    self.preferencesStore = preferencesStore
+    self.historyStore = historyStore
+    self.updateManager = updateManager
+  }
+
+  func showControls(for role: TimerRole) {
+    if controls == nil {
+      controls = makeWindow(
+        title: "Timer Controls",
+        content: TimerControlsView(timerCoordinator: timerCoordinator, preferencesStore: preferencesStore)
+      )
+    }
+    controls?.setAccessibilityIdentifier("timer-controls-\(role.rawValue)")
+    present(controls)
+  }
+
+  func showHistory() {
+    if history == nil {
+      history = makeWindow(
+        title: "History",
+        content: HistoryView(historyStore: historyStore, timerCoordinator: timerCoordinator),
+        resizable: true
+      )
+      history?.setContentSize(NSSize(width: 740, height: 420))
+    }
+    historyStore.refresh()
+    present(history)
+  }
+
+  func showAbout() {
+    if about == nil {
+      about = makeWindow(title: "About JustAboutTime", content: AboutView().environmentObject(updateManager))
+    }
+    present(about)
+  }
+
+  private func makeWindow<Content: View>(title: String, content: Content, resizable: Bool = false) -> NSWindow {
+    let host = NSHostingController(rootView: content)
+    let window = NSWindow(contentViewController: host)
+    window.title = title
+    window.styleMask = resizable ? [.titled, .closable, .miniaturizable, .resizable] : [.titled, .closable, .miniaturizable]
+    window.isReleasedWhenClosed = false
+    window.isRestorable = false
+    window.setContentSize(host.view.fittingSize)
+    window.center()
+    return window
+  }
+
+  private func present(_ window: NSWindow?) {
+    NSApp.activate(ignoringOtherApps: true)
+    window?.makeKeyAndOrderFront(nil)
+  }
+}
+
+private struct TimerControlsView: View {
+  @ObservedObject var timerCoordinator: TimerCoordinator
+  @ObservedObject var preferencesStore: PreferencesStore
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      TimerControlCard(timer: timerCoordinator.primaryTimer, preferencesStore: preferencesStore) {
+        timerCoordinator.primaryTimer.finish()
+      }
+      .id(ObjectIdentifier(timerCoordinator.primaryTimer))
+
+      if timerCoordinator.isSecondaryActivated {
+        TimerControlCard(timer: timerCoordinator.secondaryTimer, preferencesStore: preferencesStore) {
+          timerCoordinator.deactivateSecondary()
+        }
+        .id(ObjectIdentifier(timerCoordinator.secondaryTimer))
+      } else {
+        Button {
+          timerCoordinator.activateSecondary()
+        } label: {
+          Label("Add Secondary Timer", systemImage: "plus.circle")
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderless)
+        .padding(.vertical, 8)
+      }
+    }
+    .padding(18)
+    .frame(width: 400)
+  }
+}
+
+private struct TimerControlCard: View {
+  @ObservedObject var timer: TimerStore
+  @ObservedObject var preferencesStore: PreferencesStore
+  let finish: () -> Void
+
+  private var snapshot: SharedTimerSnapshot { timer.sharedSnapshot() }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      HStack {
+        Label(timer.role.displayName, systemImage: "timer").font(.headline)
+        Spacer()
+        Text(snapshot.statusLabel).font(.caption).foregroundStyle(.secondary)
+      }
+
+      Text(snapshot.formattedValue(at: .now))
+        .font(.system(size: 42, weight: .medium, design: .rounded))
+        .monospacedDigit()
+        .contentTransition(.numericText())
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
+
+      if let progress = snapshot.progress {
+        ProgressView(value: progress, total: 1).tint(.accentColor)
+      }
+
+      HStack(spacing: 8) {
+        if snapshot.availableActions.contains(.pause) {
+          Button(action: timer.pause) { Label("Pause", systemImage: "pause.fill") }
+            .buttonStyle(.borderedProminent)
+        } else if snapshot.availableActions.contains(.resume) {
+          Button(action: timer.resume) { Label("Resume", systemImage: "play.fill") }
+            .buttonStyle(.borderedProminent)
+        }
+        if snapshot.availableActions.contains(.finish) {
+          Button(action: finish) { Label("Finish", systemImage: "checkmark") }
+        }
+        if snapshot.availableActions.contains(.repeatLast) {
+          Button(action: timer.repeatLastTimer) { Label("Repeat", systemImage: "arrow.clockwise") }
+        }
+        Spacer(minLength: 0)
+        Menu {
+          ForEach(preferencesStore.presetDurations(for: timer.role), id: \.self) { duration in
+            Button("\(Int(duration / 60)) min countdown") { timer.startCountdown(duration: duration) }
+          }
+          Button("Count Up", action: timer.startCountUp)
+        } label: {
+          Label(snapshot.state == .idle ? "Start" : "New", systemImage: "plus")
+        }
+        .fixedSize()
+      }
+      .controlSize(.regular)
+    }
+    .padding(16)
+    .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 14))
+    .accessibilityElement(children: .contain)
+    .accessibilityLabel("\(timer.role.displayName) timer")
+  }
+}
+
 private struct StatusBarLabelView: View {
     @ObservedObject var timerCoordinator: TimerCoordinator
 
     var body: some View {
+        statusLabel
+    }
+
+    private var statusLabel: some View {
         StatusBarTimerContentView(
             primaryTimer: timerCoordinator.primaryTimer,
             secondaryTimer: timerCoordinator.secondaryTimer,

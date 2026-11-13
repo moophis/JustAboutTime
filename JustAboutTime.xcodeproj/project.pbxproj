@@ -37,6 +37,12 @@
 		A1000001000000000000001C /* TimerRole.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000001D /* TimerRole.swift */; };
 		A1000001000000000000001D /* TimerCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000001E /* TimerCoordinator.swift */; };
 		A1000001000000000000001E /* TimerCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000000000000001F /* TimerCoordinatorTests.swift */; };
+		A1000001000000000000001F /* SharedTimerSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000020 /* SharedTimerSnapshot.swift */; };
+		A10000010000000000000020 /* JustAboutTimeWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000021 /* JustAboutTimeWidget.swift */; };
+		A10000010000000000000021 /* Widget appex */ = {isa = PBXBuildFile; fileRef = A10000110000000000000022 /* JustAboutTimeWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A10000010000000000000023 /* WidgetSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000024 /* WidgetSnapshotTests.swift */; };
+		A10000010000000000000025 /* WidgetTimerIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000025 /* WidgetTimerIntents.swift */; };
+		A10000010000000000000026 /* WidgetTimerIntents.swift in Widget Sources */ = {isa = PBXBuildFile; fileRef = A10000110000000000000025 /* WidgetTimerIntents.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -46,6 +52,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = A10000810000000000000001;
 			remoteInfo = JustAboutTime;
+		};
+		A10000310000000000000002 /* Widget target proxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10000410000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10000810000000000000003;
+			remoteInfo = JustAboutTimeWidget;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -81,6 +94,12 @@
 		A1000011000000000000001D /* TimerRole.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerRole.swift; sourceTree = "<group>"; };
 		A1000011000000000000001E /* TimerCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerCoordinator.swift; sourceTree = "<group>"; };
 		A1000011000000000000001F /* TimerCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerCoordinatorTests.swift; sourceTree = "<group>"; };
+		A10000110000000000000020 /* SharedTimerSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedTimerSnapshot.swift; sourceTree = "<group>"; };
+		A10000110000000000000021 /* JustAboutTimeWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustAboutTime/JustAboutTimeWidget.swift; sourceTree = SOURCE_ROOT; };
+		A10000110000000000000022 /* JustAboutTimeWidget.appex */ = {isa = PBXFileReference; explicitFileType = wrapper.app-extension; includeInIndex = 0; path = JustAboutTimeWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000110000000000000023 /* WidgetInfo.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = WidgetInfo.plist; sourceTree = "<group>"; };
+		A10000110000000000000024 /* WidgetSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshotTests.swift; sourceTree = "<group>"; };
+		A10000110000000000000025 /* WidgetTimerIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustAboutTime/WidgetTimerIntents.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,6 +155,8 @@
 				A1000011000000000000001E /* TimerCoordinator.swift */,
 				A1000011000000000000000E /* TimerStore.swift */,
 				A1000011000000000000000B /* TimerStateMachine.swift */,
+				A10000110000000000000020 /* SharedTimerSnapshot.swift */,
+				A10000110000000000000025 /* WidgetTimerIntents.swift */,
 				A10000110000000000000003 /* Info.plist */,
 			);
 			path = JustAboutTime;
@@ -151,6 +172,7 @@
 				A1000011000000000000000C /* TimerStoreTests.swift */,
 				A1000011000000000000001F /* TimerCoordinatorTests.swift */,
 				A1000011000000000000001C /* UpdateManagerTests.swift */,
+				A10000110000000000000024 /* WidgetSnapshotTests.swift */,
 			);
 			path = JustAboutTimeTests;
 			sourceTree = "<group>";
@@ -174,10 +196,12 @@
 				A10000710000000000000001 /* Sources */,
 				A10000210000000000000001 /* Frameworks */,
 				A10000710000000000000003 /* Resources */,
+				A10000710000000000000005 /* Embed Widget */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A10000A10000000000000002 /* Widget target dependency */,
 			);
 			name = JustAboutTime;
 			packageProductDependencies = (
@@ -188,6 +212,7 @@
 			productReference = A10000110000000000000005 /* JustAboutTime.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A10000810000000000000003 /* JustAboutTimeWidget */ = {isa = PBXNativeTarget; buildConfigurationList = A10000610000000000000004 /* Widget configs */; buildPhases = (A10000710000000000000004 /* Widget Sources */); buildRules = (); dependencies = (); name = JustAboutTimeWidget; productName = JustAboutTimeWidget; productReference = A10000110000000000000022 /* JustAboutTimeWidget.appex */; productType = "com.apple.product-type.app-extension"; };
 		A10000810000000000000002 /* JustAboutTimeTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A10000610000000000000002 /* Build configuration list for PBXNativeTarget "JustAboutTimeTests" */;
@@ -246,6 +271,7 @@
 			targets = (
 				A10000810000000000000001 /* JustAboutTime */,
 				A10000810000000000000002 /* JustAboutTimeTests */,
+				A10000810000000000000003 /* JustAboutTimeWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -259,6 +285,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10000710000000000000005 /* Embed Widget */ = {isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = ""; dstSubfolderSpec = 13; files = (A10000010000000000000021 /* Widget appex */); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -286,6 +313,8 @@
 				A1000001000000000000001D /* TimerCoordinator.swift in Sources */,
 				A1000001000000000000000C /* TimerStore.swift in Sources */,
 				A10000010000000000000009 /* TimerStateMachine.swift in Sources */,
+				A1000001000000000000001F /* SharedTimerSnapshot.swift in Sources */,
+				A10000010000000000000025 /* WidgetTimerIntents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -300,9 +329,11 @@
 				A1000001000000000000000A /* TimerStoreTests.swift in Sources */,
 				A1000001000000000000001E /* TimerCoordinatorTests.swift in Sources */,
 				A1000001000000000000001A /* UpdateManagerTests.swift in Sources */,
+				A10000010000000000000023 /* WidgetSnapshotTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10000710000000000000004 /* Widget Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000010000000000000020 /* JustAboutTimeWidget.swift in Sources */, A10000010000000000000026 /* WidgetTimerIntents.swift in Widget Sources */, A1000001000000000000001F /* SharedTimerSnapshot.swift in Sources */, A10000010000000000000007 /* TimerMode.swift in Sources */, A1000001000000000000001C /* TimerRole.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -310,6 +341,11 @@
 			isa = PBXTargetDependency;
 			target = A10000810000000000000001 /* JustAboutTime */;
 			targetProxy = A10000310000000000000001 /* PBXContainerItemProxy */;
+		};
+		A10000A10000000000000002 /* Widget target dependency */ = {
+			isa = PBXTargetDependency;
+			target = A10000810000000000000003 /* JustAboutTimeWidget */;
+			targetProxy = A10000310000000000000002 /* Widget target proxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -360,6 +396,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = JustAboutTime/JustAboutTime.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 53URGYWCC5;
@@ -382,6 +419,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = JustAboutTime/JustAboutTime.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 53URGYWCC5;
@@ -443,6 +481,8 @@
 			};
 			name = Release;
 		};
+		A10000C10000000000000007 /* Widget Debug */ = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_ENTITLEMENTS = JustAboutTime/JustAboutTimeWidget.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 13; DEVELOPMENT_TEAM = 53URGYWCC5; INFOPLIST_FILE = JustAboutTime/WidgetInfo.plist; MACOSX_DEPLOYMENT_TARGET = 14.0; MARKETING_VERSION = 1.1.2; PRODUCT_BUNDLE_IDENTIFIER = com.liqiangw.JustAboutTime.widget; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = macosx; SWIFT_VERSION = 6.0; }; name = Debug; };
+		A10000C10000000000000008 /* Widget Release */ = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_ENTITLEMENTS = JustAboutTime/JustAboutTimeWidget.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 13; DEVELOPMENT_TEAM = 53URGYWCC5; INFOPLIST_FILE = JustAboutTime/WidgetInfo.plist; MACOSX_DEPLOYMENT_TARGET = 14.0; MARKETING_VERSION = 1.1.2; PRODUCT_BUNDLE_IDENTIFIER = com.liqiangw.JustAboutTime.widget; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = macosx; SWIFT_VERSION = 6.0; }; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -473,6 +513,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		A10000610000000000000004 /* Widget configs */ = {isa = XCConfigurationList; buildConfigurations = (A10000C10000000000000007, A10000C10000000000000008); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */

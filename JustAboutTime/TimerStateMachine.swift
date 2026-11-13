@@ -22,6 +22,10 @@ struct TimerStateMachine: Equatable {
 
     private(set) var state: State = .idle
 
+    init(restoring session: TimerSession? = nil) {
+        if let session { state = .active(session) }
+    }
+
     var session: TimerSession? {
         guard case let .active(session) = state else {
             return nil

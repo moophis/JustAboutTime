@@ -191,7 +191,7 @@ struct JustAboutTimeTests {
 
     @MainActor
     @Test func statusBarProductionRendererWritesDeterministicDueAndOverdueArtifacts() throws {
-        let directory = ProcessInfo.processInfo.environment["STATUSBAR_RENDER_ARTIFACT_DIR"] ?? "/tmp/just-about-time-render-artifacts"
+        let directory = ProcessInfo.processInfo.environment["STATUSBAR_RENDER_ARTIFACT_DIR"] ?? FileManager.default.temporaryDirectory.appendingPathComponent("just-about-time-render-artifacts-\(UUID().uuidString)").path
         try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
         let progress = CountdownProgressPresentation(fractionComplete: 0.5, isWarning: false)
         let cases: [(String, TimerStatusPresentation, TimerStatusPresentation?)] = [
@@ -449,7 +449,10 @@ struct JustAboutTimeTests {
         #expect(appSource.contains("let notificationManager = NotificationManager()"))
         #expect(appSource.contains("let timerCoordinator = TimerCoordinator("))
         #expect(appSource.contains("ShortcutManager(timerCoordinator: timerCoordinator)"))
-        #expect(appSource.contains("Window(\"History\", id: HistoryWindow.id)"))
+        #expect(appSource.contains("Window(\"History\"") == false)
+        #expect(appSource.contains("func showHistory()"))
+        #expect(appSource.contains("private var history: NSWindow?"))
+        #expect(appSource.contains("window.isRestorable = false"))
         #expect(appSource.contains("HistoryView(historyStore: historyStore, timerCoordinator: timerCoordinator)"))
         #expect(appSource.contains("Settings {"))
         #expect(appSource.contains("PreferencesView(preferencesStore: preferencesStore, notificationManager: notificationManager)"))
@@ -573,7 +576,7 @@ struct JustAboutTimeTests {
         let appSource = try source(at: projectFilePath("JustAboutTime/JustAboutTimeApp.swift"))
         let menuSource = try source(at: projectFilePath("JustAboutTime/MenuBarView.swift"))
 
-        #expect(coordinatorSource.contains("timer.$activeSession"))
+        #expect(coordinatorSource.contains("timer.widgetStateDidChange"))
         #expect(coordinatorSource.contains("timer.$latestHistoryFailure"))
         #expect(coordinatorSource.contains(".removeDuplicates()"))
         #expect(coordinatorSource.contains("timer.objectWillChange") == false)
