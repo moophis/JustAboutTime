@@ -2,6 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>com.liqiangw.JustAboutTime</key>
+		<string>JustAboutTime</string>
+		<key>com.liqiangw.JustAboutTime.widget</key>
+		<string>JustAboutTime Widget</string>
+	</dict>
 	<key>method</key>
 	<string>developer-id</string>
 	<key>destination</key>

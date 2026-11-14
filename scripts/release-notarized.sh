@@ -77,6 +77,8 @@ xcodebuild archive \
   CODE_SIGN_STYLE=Manual \
   DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
   CODE_SIGN_IDENTITY='Developer ID Application' \
+  JAT_APP_PROFILE=JustAboutTime \
+  JAT_WIDGET_PROFILE='JustAboutTime Widget' \
   ENABLE_HARDENED_RUNTIME=YES
 
 info "Generating Developer ID export options"
